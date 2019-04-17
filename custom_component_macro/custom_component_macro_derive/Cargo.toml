@@ -1,0 +1,15 @@
+[package]
+name = "custom_component_macro_derive"
+version = "0.1.0"
+authors = ["DefecateRainbows <cedhut02@gmail.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+mopa = "0.2.2"
+specs = { path = "../../specs/" }
+typetag = "0.1.1"
+syn = "0.14.4"
+quote = "0.6.3"

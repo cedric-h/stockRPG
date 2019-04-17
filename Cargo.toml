@@ -1,0 +1,77 @@
+[package]
+name = "stockRPG"
+version = "0.1.0"
+authors = ["DefecateRainbows <cedhut02@gmail.com>"]
+edition = "2018"
+
+[features]
+default = ["dx12"]
+metal = ["gfx-backend-metal"]
+dx12 = ["gfx-backend-dx12"]
+dx11 = ["gfx-backend-dx11"]
+vulkan = ["gfx-backend-vulkan"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = false
+
+[dependencies]
+# custom derive macro.
+custom_component_macro = { path = "./custom_component_macro" }
+custom_component_macro_derive = { path = "./custom_component_macro/custom_component_macro_derive" }
+# serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# utilities
+mopa = "0.2.2"
+typetag = "0.1.1"
+rand = "0.6"
+arrayvec = "0.4"
+# logging
+log = "0.4.0"
+simple_logger = "1.0"
+# window creation
+winit = "0.18"
+# graphics
+gfx-hal = "0.1"
+shaderc = "0.3"
+image = "0.21"
+# physics
+nalgebra-glm = { version = "0.4.0", features = ["serde-serialize"] }
+nalgebra = "0.18"
+ncollide3d = "0.19"
+nphysics3d = "0.11"
+# ECS
+specs = { path = "./specs/", features = ["nightly"]}
+specs-derive = { path = "./specs/specs-derive", version = "0.4.0" }
+# dev window dependencies
+gfx = "0.17"
+gfx_device_gl = "0.15"
+gfx_window_glutin = "0.28"
+glutin = "0.19"
+imgui = "0.0.22"
+imgui-gfx-renderer = "0.0.22"
+imgui-winit-support = "0.0.22"
+
+[dependencies.gfx-backend-vulkan]
+version = "0.1"
+optional = true
+
+[target.'cfg(target_os = "macos")'.dependencies.gfx-backend-metal]
+version = "0.1"
+optional = true
+
+[target.'cfg(windows)'.dependencies.gfx-backend-dx12]
+version = "0.1"
+optional = true
+
+[target.'cfg(windows)'.dependencies.gfx-backend-dx11]
+version = "0.1"
+optional = true
