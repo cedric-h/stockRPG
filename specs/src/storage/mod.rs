@@ -1,6 +1,7 @@
 //! Component storage types, implementations for component joins, etc.
 
 pub use self::data::{ReadStorage, WriteStorage};
+pub use self::entry::{Entries, OccupiedEntry, StorageEntry, VacantEntry};
 pub use self::flagged::FlaggedStorage;
 pub use self::generic::{GenericReadStorage, GenericWriteStorage};
 pub use self::restrict::{
@@ -9,7 +10,6 @@ pub use self::restrict::{
 };
 pub use self::storages::{BTreeStorage, DenseVecStorage, HashMapStorage, NullStorage, VecStorage};
 pub use self::track::{ComponentEvent, Tracked};
-pub use self::entry::{Entries, OccupiedEntry, VacantEntry, StorageEntry};
 
 use std;
 use std::marker::PhantomData;
@@ -331,7 +331,8 @@ where
 
 unsafe impl<'a, T: Component, D> DistinctStorage for Storage<'a, T, D> where
     T::Storage: DistinctStorage
-{}
+{
+}
 
 impl<'a, 'e, T, D> Join for &'a Storage<'e, T, D>
 where
@@ -369,7 +370,8 @@ where
     T: Component,
     D: Deref<Target = MaskedStorage<T>>,
     T::Storage: Sync,
-{}
+{
+}
 
 impl<'a, 'e, T, D> Join for &'a mut Storage<'e, T, D>
 where
@@ -399,7 +401,8 @@ where
     T: Component,
     D: DerefMut<Target = MaskedStorage<T>>,
     T::Storage: Sync + DistinctStorage,
-{}
+{
+}
 
 /// Tries to create a default value, returns an `Err` with the name of the storage and/or component
 /// if there's no default.

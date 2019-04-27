@@ -1,9 +1,6 @@
 //use crate::prelude::*;
-use winit::{
-    dpi::LogicalSize, CreationError, EventsLoop,
-    VirtualKeyCode, Window, WindowBuilder,
-};
 use std::collections::HashSet;
+use winit::{dpi::LogicalSize, CreationError, EventsLoop, VirtualKeyCode, Window, WindowBuilder};
 
 #[derive(Debug)]
 pub struct WinitState {
@@ -43,7 +40,7 @@ impl Default for WinitState {
                 width: 800.0,
                 height: 600.0,
             },
-            )
-            .expect("Could not create a window!")
+        )
+        .expect("Could not create a window!")
     }
 }

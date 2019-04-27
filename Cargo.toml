@@ -34,6 +34,7 @@ mopa = "0.2.2"
 typetag = "0.1.1"
 rand = "0.6"
 arrayvec = "0.4"
+boolinator = "2.4.0"
 # logging
 log = "0.4.0"
 simple_logger = "1.0"

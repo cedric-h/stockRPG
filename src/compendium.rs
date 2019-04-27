@@ -1,5 +1,5 @@
 //use crate::prelude::*;
-use imgui::{ImString};
+use imgui::ImString;
 
 pub struct Compendium {
     pub entity_query: ImString,

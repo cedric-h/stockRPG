@@ -9,7 +9,7 @@ pub struct Camera {
     pub position: glm::TVec3<f32>,
     pub offset: glm::TVec3<f32>,
     quat: glm::Qua<f32>,
-    pub view_matrix: glm::TMat4<f32>
+    pub view_matrix: glm::TMat4<f32>,
 }
 impl Camera {
     /// Updates the position of the camera with WASDQE controls.
@@ -34,7 +34,7 @@ impl Camera {
     fn update_view_matrix(&mut self) {
         self.view_matrix = self.get_view_matrix();
     }
-    
+
     pub fn get_quat(&self) -> glm::Qua<f32> {
         self.quat
     }
@@ -50,7 +50,7 @@ impl Camera {
                 -0.006799023,
                 -0.563467,
             )),
-            view_matrix: glm::identity()
+            view_matrix: glm::identity(),
         };
         cam.update_view_matrix();
         cam

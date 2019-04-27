@@ -1,7 +1,14 @@
 use mopa::*;
 
 #[typetag::serde]
-pub trait AssemblageComponent: DevUiComponent + CopyToOtherEntity + mopa::Any + std::fmt::Debug + std::marker::Send + std::marker::Sync {
+pub trait AssemblageComponent:
+    DevUiComponent
+    + CopyToOtherEntity
+    + mopa::Any
+    + std::fmt::Debug
+    + std::marker::Send
+    + std::marker::Sync
+{
     //fn world_insert(&self, entity: Entity, world: &World) -> InsertResult<()>;
     //fn world_remove(&self, entity: Entity, world: &World);
     //fn lazy_remove(&self, entity: Entity, lazy_update: &specs::Read<specs::LazyUpdate>);

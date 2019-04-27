@@ -1,8 +1,6 @@
 use crate::prelude::*;
-use winit::{
-    VirtualKeyCode, KeyboardInput, WindowEvent, Event, MouseButton, ElementState,
-};
 use std::collections::HashSet;
+use winit::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 
 #[derive(Debug, Clone, Default)]
 pub struct UserInput {
@@ -45,9 +43,9 @@ impl UserInput {
                                 virtual_keycode: Some(code),
                                 ..
                             },
-                            ..
+                        ..
                     },
-                    ..
+                ..
             } => {
                 //apparently on macs we can only get key events when the window is focused,
                 //but that's fine since that's all we want anyway.
@@ -64,10 +62,11 @@ impl UserInput {
             }
 
             Event::WindowEvent {
-                event: WindowEvent::CursorMoved {
-                    position: winit::dpi::LogicalPosition { x, y },
-                    ..
-                },
+                event:
+                    WindowEvent::CursorMoved {
+                        position: winit::dpi::LogicalPosition { x, y },
+                        ..
+                    },
                 ..
             } => {
                 output.mouse_pos = Some((x as f32, y as f32));
@@ -80,7 +79,7 @@ impl UserInput {
                         button: MouseButton::Left,
                         ..
                     },
-                    ..
+                ..
             } => {
                 output.mouse_state = Some(true);
             }
@@ -92,7 +91,7 @@ impl UserInput {
                         button: MouseButton::Left,
                         ..
                     },
-                    ..
+                ..
             } => {
                 output.mouse_state = Some(false);
             }
@@ -111,4 +110,3 @@ impl UserInput {
         output
     }
 }
-

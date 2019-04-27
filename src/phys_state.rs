@@ -1,18 +1,15 @@
+use crate::prelude::*;
+use na::Vector3;
 use nalgebra as na;
-use na::{Vector3};
 use ncollide3d::{
     query::RayIntersection,
     shape::{Cuboid, ShapeHandle},
     world::CollisionGroups,
 };
 use nphysics3d::{
+    object::{Body, Collider, ColliderDesc, RigidBody, RigidBodyDesc},
     world::World,
-    object::{
-        Body, RigidBody,
-        Collider, ColliderDesc, RigidBodyDesc,
-    },
 };
-use crate::prelude::*;
 const GROUND_SIZE: f32 = 50.0;
 
 pub struct PhysState {
@@ -26,17 +23,17 @@ pub struct PhysState {
 impl PhysState {
     pub fn new() -> Self {
         let can_collide_group = CollisionGroups::new()
-            .with_membership(&[0,  2])
-            .with_whitelist( &[0,  2])
-            .with_blacklist( &[  1  ]);
+            .with_membership(&[0, 2])
+            .with_whitelist(&[0, 2])
+            .with_blacklist(&[1]);
         let disabled_group = CollisionGroups::new()
-            .with_membership(&[  1,2])
-            .with_whitelist( &[0,  2])
-            .with_blacklist( &[0,1  ]);
+            .with_membership(&[1, 2])
+            .with_whitelist(&[0, 2])
+            .with_blacklist(&[0, 1]);
         let raycast_group = CollisionGroups::new()
-            .with_membership(&[    2])
-            .with_whitelist( &[0,1,2])
-            .with_blacklist( &[     ]);
+            .with_membership(&[2])
+            .with_whitelist(&[0, 1, 2])
+            .with_blacklist(&[]);
 
         /*
         assert!(raycast_group.can_interact_with_groups(&disabled_group));
@@ -66,23 +63,18 @@ impl PhysState {
         let collider_desc = ColliderDesc::new(shape_handle)
             //.translation(Vector3::z() * hitbox.scale.z/2.0)
             .density(hitbox.density)
-            .collision_groups(
-                if hitbox.physics_interaction {
-                    self.can_collide_group
-                } else {
-                    self.disabled_group
-                }
-            );
+            .collision_groups(if hitbox.physics_interaction {
+                self.can_collide_group
+            } else {
+                self.disabled_group
+            });
 
         let mut body_desc = RigidBodyDesc::new();
-        body_desc
-            .set_rotations_kinematic(Vector3::new(true, true, true))
-            .set_translation(hitbox.position)
-            .set_rotation(hitbox.rotation);
-        let body = body_desc
-            .collider(&collider_desc)
-            .build(&mut self.world);
-            
+        body_desc.set_rotations_kinematic(Vector3::new(true, true, true));
+
+        let mut body = body_desc.collider(&collider_desc).build(&mut self.world);
+        Self::position_body(&mut body, &hitbox.position, &hitbox.rotation);
+
         Phys {
             body: body.handle(),
         }
@@ -100,7 +92,8 @@ impl PhysState {
         self.world
             .collider_world()
             .body_colliders(phys.body)
-            .next().unwrap()
+            .next()
+            .unwrap()
             .collision_groups()
             .is_member_of(0)
     }
@@ -108,7 +101,10 @@ impl PhysState {
     #[inline]
     pub fn collider(&self, phys: &Phys) -> Option<&Collider<f32>> {
         let part_handle = self.rigid_body(&phys).unwrap().part_handle();
-        self.world.collider_world().body_part_colliders(part_handle).next()
+        self.world
+            .collider_world()
+            .body_part_colliders(part_handle)
+            .next()
     }
 
     #[inline]
@@ -130,7 +126,12 @@ impl PhysState {
 
     #[inline]
     pub fn scale(&self, phys: &Phys) -> Option<&Vector3<f32>> {
-        Some(self.collider(&phys)?.shape().as_shape::<Cuboid<f32>>()?.half_extents())
+        Some(
+            self.collider(&phys)?
+                .shape()
+                .as_shape::<Cuboid<f32>>()?
+                .half_extents(),
+        )
     }
 
     #[inline]
@@ -139,6 +140,24 @@ impl PhysState {
         let mut position = rbd.position().clone();
         position.translation.vector = *location;
         rbd.set_position(position);
+    }
+
+    #[inline]
+    pub fn position_body(
+        body: &mut RigidBody<f32>,
+        location: &Vector3<f32>,
+        rotation: &Vector3<f32>,
+    ) {
+        use nalgebra::geometry::{Isometry, Translation, UnitQuaternion};
+        body.set_position(Isometry::from_parts(
+            Translation::from(*location),
+            UnitQuaternion::from_euler_angles(rotation.x, rotation.y, rotation.z),
+        ));
+    }
+
+    #[inline]
+    pub fn set_position(&mut self, phys: &Phys, location: &Vector3<f32>, rotation: &Vector3<f32>) {
+        Self::position_body(self.rigid_body_mut(phys).unwrap(), location, rotation);
     }
 
     #[inline]
@@ -158,7 +177,7 @@ impl PhysState {
 }
 
 pub struct Raycaster {
-    pub ray: ncollide3d::query::Ray<f32>, 
+    pub ray: ncollide3d::query::Ray<f32>,
     pub collision_group: ncollide3d::world::CollisionGroups,
 }
 
@@ -166,25 +185,21 @@ pub struct Raycaster {
 impl Raycaster {
     #[inline]
     pub fn point_from_camera(screen_coords: &(f32, f32), ls: &LocalState) -> Self {
-        use ncollide3d::{query::Ray, world::CollisionGroups};
         use nalgebra::geometry::Point;
+        use ncollide3d::{query::Ray, world::CollisionGroups};
 
         let camera = ls.camera;
         let omnigroup = CollisionGroups::new()
-            .with_membership(&[    2])
-            .with_whitelist( &[0,1,2])
-            .with_blacklist( &[     ]);
+            .with_membership(&[2])
+            .with_whitelist(&[0, 1, 2])
+            .with_blacklist(&[]);
         let ray = Ray::new(
             Point::from(camera.position + camera.offset),
             glm::unproject(
                 &glm::vec3(screen_coords.0, screen_coords.1, -1.0),
                 &glm::inverse(&glm::quat_to_mat4(&camera.get_quat())),
                 &ls.perspective_projection,
-                glm::vec4(
-                    0.0, 0.0,
-                    ls.frame_width as f32,
-                    ls.frame_height as f32,
-                ),
+                glm::vec4(0.0, 0.0, ls.frame_width as f32, ls.frame_height as f32),
             ),
         );
 
@@ -195,7 +210,10 @@ impl Raycaster {
     }
 
     #[inline]
-    pub fn cast_at_ground<'a>(&'a self, ps: &'a PhysState) -> impl Iterator<Item = (&'a Collider<f32>, RayIntersection<f32>)> {
+    pub fn cast_at_ground<'a>(
+        &'a self,
+        ps: &'a PhysState,
+    ) -> impl Iterator<Item = (&'a Collider<f32>, RayIntersection<f32>)> {
         ps.world
             .collider_world()
             .interferences_with_ray(&self.ray, &self.collision_group)

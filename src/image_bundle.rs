@@ -18,8 +18,12 @@ impl ImageBundle {
             for line in lines {
                 let words: Vec<&str> = line.split(" ").collect();
                 let name = words[0];
-                let coords: [u32; 4] = [words[2].parse::<u32>().unwrap(), words[3].parse::<u32>().unwrap(),
-                words[4].parse::<u32>().unwrap(), words[5].parse::<u32>().unwrap()];
+                let coords: [u32; 4] = [
+                    words[2].parse::<u32>().unwrap(),
+                    words[3].parse::<u32>().unwrap(),
+                    words[4].parse::<u32>().unwrap(),
+                    words[5].parse::<u32>().unwrap(),
+                ];
                 println!("{:?}", coords);
                 map.insert(name.to_string(), coords);
             }

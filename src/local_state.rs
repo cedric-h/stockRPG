@@ -70,7 +70,7 @@ impl LocalState {
             self.is_orthographic = !self.is_orthographic;
         }
         assert!(self.frame_width != 0.0 && self.frame_height != 0.0);
-        
+
         let now = Instant::now();
         let duration = now.duration_since(self.last_update);
         let duration = duration.as_secs() as f32 + duration.subsec_nanos() as f32 * 1e-9;
@@ -92,10 +92,8 @@ impl LocalState {
         //self.camera.update_position(&input.keys_held, 5.0 * duration);
     }
     pub fn update_perspective(&mut self) {
-        self.perspective_projection = LocalState::get_perspective(
-            self.frame_width,
-            self.frame_height,
-            );
+        self.perspective_projection =
+            LocalState::get_perspective(self.frame_width, self.frame_height);
     }
     pub fn get_perspective(frame_width: f64, frame_height: f64) -> glm::TMat4<f32> {
         let mut temp = glm::perspective_lh_zo(

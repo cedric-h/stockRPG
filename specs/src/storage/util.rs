@@ -9,7 +9,10 @@ pub trait MaybeSerialize {
     fn maybe_serialize(&self) -> Option<String>;
 }
 
-impl<T> MaybeSerialize for T where T: ?Sized {
+impl<T> MaybeSerialize for T
+where
+    T: ?Sized,
+{
     default fn maybe_serialize(&self) -> Option<String> {
         None
     }
@@ -28,6 +31,12 @@ where
             }
         }
         let (_, type_name) = type_name.split_at(last_colon_index + 1);
-        Some(LEFT_STRING.to_owned() + type_name + MIDDLE_STRING + &serde_json::to_string(&self).unwrap() + RIGHT_STRING)
+        Some(
+            LEFT_STRING.to_owned() +
+                type_name +
+                MIDDLE_STRING +
+                &serde_json::to_string(&self).unwrap() +
+                RIGHT_STRING,
+        )
     }
 }

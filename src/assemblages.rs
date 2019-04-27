@@ -1,11 +1,10 @@
 use crate::prelude::*;
-use std::fs::File;
-use std::io::prelude::*;
-use std::collections::HashMap;
-use specs::{LazyUpdate, world::EntitiesRes, world::LazyBuilder, Entity};
 use custom_component_macro::AssemblageComponent;
 use imgui::ImString;
-
+use specs::{world::EntitiesRes, world::LazyBuilder, Entity, LazyUpdate};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::prelude::*;
 
 const TYPES_PATH: &str = "./src/data/types.json";
 const INSTANCES_PATH: &str = "./src/data/instances.json";
@@ -21,15 +20,23 @@ impl Assemblager {
         Self {
             assemblages: {
                 let mut data = String::new();
-                File::open(TYPES_PATH).unwrap().read_to_string(&mut data).unwrap();
+                File::open(TYPES_PATH)
+                    .unwrap()
+                    .read_to_string(&mut data)
+                    .unwrap();
                 serde_json::from_str(&data).unwrap()
             },
             components: HashMap::new(),
         }
     }
 
-    pub fn register_component<T: AssemblageComponent>(&mut self, component_key: String, component: T) {
-        self.components.insert(ImString::new(component_key), Box::new(component));
+    pub fn register_component<T: AssemblageComponent>(
+        &mut self,
+        component_key: String,
+        component: T,
+    ) {
+        self.components
+            .insert(ImString::new(component_key), Box::new(component));
     }
 
     fn get_json(world: &specs::World, entity: Entity) -> String {
@@ -70,7 +77,8 @@ impl Assemblager {
         use specs::Join;
 
         let mut file = File::create(TYPES_PATH).unwrap();
-        file.write_all(&serde_json::to_string(&self.assemblages).unwrap().as_bytes()).unwrap();
+        file.write_all(&serde_json::to_string(&self.assemblages).unwrap().as_bytes())
+            .unwrap();
 
         lu.exec(move |world| {
             let mut serialized_entities = String::new();
@@ -89,14 +97,15 @@ impl Assemblager {
     }
 
     pub fn load_save(&self, world: &mut specs::World) {
-        use specs::{Join, Builder};
+        use specs::{Builder, Join};
 
         let mut file = File::open(INSTANCES_PATH).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
 
         {
-            let entity_data: Vec<Vec<Box<AssemblageComponent>>> = serde_json::from_str(&contents).unwrap();
+            let entity_data: Vec<Vec<Box<AssemblageComponent>>> =
+                serde_json::from_str(&contents).unwrap();
             let lu = world.read_resource::<specs::world::LazyUpdate>();
             let ents = world.entities();
 
@@ -118,7 +127,12 @@ impl Assemblager {
         }
     }
 
-    pub fn draft<'a, 'b, 'c>(&'a self, assemblage_key: &'c str, lu: &'b LazyUpdate, ents: &'a EntitiesRes) -> LazyBuilder<'b> {
+    pub fn draft<'a, 'b, 'c>(
+        &'a self,
+        assemblage_key: &'c str,
+        lu: &'b LazyUpdate,
+        ents: &'a EntitiesRes,
+    ) -> LazyBuilder<'b> {
         use specs::Builder;
         let components = &self.assemblages[assemblage_key];
         let mut builder = lu.create_entity(&ents);
@@ -134,12 +148,23 @@ impl Assemblager {
         builder
     }
 
-    pub fn build<'a, 'b>(&self, assemblage_key: &str, lu: &'b LazyUpdate, ents: &'a EntitiesRes) -> Entity {
+    pub fn build<'a, 'b>(
+        &self,
+        assemblage_key: &str,
+        lu: &'b LazyUpdate,
+        ents: &'a EntitiesRes,
+    ) -> Entity {
         use specs::Builder;
         self.draft(assemblage_key, lu, ents).build()
     }
 
-    pub fn build_at<'a, 'b>(&self, assemblage_key: &str, lu: &'b LazyUpdate, ents: &'a EntitiesRes, pos: glm::TVec3<f32>) -> Entity {
+    pub fn build_at<'a, 'b>(
+        &self,
+        assemblage_key: &str,
+        lu: &'b LazyUpdate,
+        ents: &'a EntitiesRes,
+        pos: glm::TVec3<f32>,
+    ) -> Entity {
         let e = self.build(assemblage_key, lu, ents);
         lu.exec(move |world| {
             let mut physes = world.write_storage::<Hitbox>();
@@ -149,7 +174,11 @@ impl Assemblager {
         e
     }
 
-    pub fn cache<'a>(&'a mut self, lazy_update: &'a LazyUpdate, entities_res: &'a EntitiesRes) -> Spawner<'a> {
+    pub fn cache<'a>(
+        &'a mut self,
+        lazy_update: &'a LazyUpdate,
+        entities_res: &'a EntitiesRes,
+    ) -> Spawner<'a> {
         Spawner {
             assemblager: self,
             lazy_update,
@@ -169,14 +198,17 @@ pub struct Spawner<'a> {
 #[allow(dead_code)]
 impl<'a> Spawner<'a> {
     pub fn draft(&self, assemblage_key: &str) -> LazyBuilder {
-        self.assemblager.draft(assemblage_key, self.lazy_update, self.entities_res)
+        self.assemblager
+            .draft(assemblage_key, self.lazy_update, self.entities_res)
     }
 
     pub fn build(&self, assemblage_key: &str) -> Entity {
-        self.assemblager.build(assemblage_key, self.lazy_update, self.entities_res)
+        self.assemblager
+            .build(assemblage_key, self.lazy_update, self.entities_res)
     }
 
     pub fn build_at(&self, assemblage_key: &str, pos: glm::TVec3<f32>) -> Entity {
-        self.assemblager.build_at(assemblage_key, self.lazy_update, self.entities_res, pos)
+        self.assemblager
+            .build_at(assemblage_key, self.lazy_update, self.entities_res, pos)
     }
 }

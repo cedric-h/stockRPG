@@ -5,15 +5,13 @@ use imgui_winit_support;
 //time
 use std::time::Instant;
 //gfx
+use gfx::format::{Unorm, D24_S8, R8_G8_B8_A8};
+use gfx::handle::{DepthStencilView, RenderTargetView};
 use gfx::{self, Device};
-use gfx::handle::{RenderTargetView, DepthStencilView};
-use gfx::format::{D24_S8, Unorm, R8_G8_B8_A8};
-use gfx_device_gl::{Resources, CommandBuffer};
+use gfx_device_gl::{CommandBuffer, Resources};
 use gfx_window_glutin;
 //glutin
 use glutin;
-
-const CLEAR_COLOR: [f32; 4] = [0.1, 0.2, 0.3, 1.0];
 
 pub struct DevUiState {
     events_loop: glutin::EventsLoop,
@@ -23,6 +21,7 @@ pub struct DevUiState {
     factory: gfx_device_gl::Factory,
     main_color: RenderTargetView<Resources, (R8_G8_B8_A8, Unorm)>,
     main_depth: DepthStencilView<Resources, (D24_S8, Unorm)>,
+    pub clear_color: [f32; 4],
     imgui: ImGui,
     hidpi_factor: f64,
     renderer: Renderer<Resources>,
@@ -35,13 +34,13 @@ impl DevUiState {
         type DepthFormat = gfx::format::DepthStencil;
 
         let events_loop = glutin::EventsLoop::new();
-        let context = glutin::ContextBuilder::new();//.with_vsync(true);
+        let context = glutin::ContextBuilder::new(); //.with_vsync(true);
         let window = glutin::WindowBuilder::new()
             .with_title("Developer UI")
             .with_dimensions(glutin::dpi::LogicalSize::new(525.0, 625.0));
         let (window, device, mut factory, main_color, main_depth) =
             gfx_window_glutin::init::<ColorFormat, DepthFormat>(window, context, &events_loop)
-            .expect("Failed to initalize graphics");
+                .expect("Failed to initalize graphics");
         let encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
         let shaders = {
             let version = device.get_info().shading_language;
@@ -91,9 +90,9 @@ impl DevUiState {
         imgui.fonts().add_font_with_config(
             include_bytes!("./font/SDS_8x8.ttf"),
             ImFontConfig::new()
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(font_size),
+                .oversample_h(1)
+                .pixel_snap_h(true)
+                .size_pixels(font_size),
             &FontGlyphRange::default(),
         );
 
@@ -112,6 +111,7 @@ impl DevUiState {
             factory,
             main_color,
             main_depth,
+            clear_color: [0.1, 0.2, 0.3, 1.0],
             imgui,
             hidpi_factor,
             renderer,
@@ -126,18 +126,15 @@ impl DevUiState {
         let main_color = &mut self.main_color;
         let main_depth = &mut self.main_depth;
         let renderer = &mut self.renderer;
-        
+
         self.events_loop.poll_events(|event| {
-            use glutin::{
-                Event,
-                WindowEvent::Resized,
-            };
+            use glutin::{Event, WindowEvent::Resized};
 
             imgui_winit_support::handle_event(
                 imgui,
                 &event,
                 window.get_hidpi_factor(),
-                *hidpi_factor
+                *hidpi_factor,
             );
 
             if let Event::WindowEvent { event, .. } = event {
@@ -163,7 +160,7 @@ impl DevUiState {
         let ui = imgui.frame(frame_size, delta_s);
         run_ui(&ui);
 
-        self.encoder.clear(&self.main_color, CLEAR_COLOR);
+        self.encoder.clear(&self.main_color, self.clear_color);
         self.renderer
             .render(ui, &mut self.factory, &mut self.encoder)
             .expect("Rendering failed");
