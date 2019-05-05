@@ -17,6 +17,7 @@ pub trait AssemblageComponent:
 
     fn add_to_lazy_builder(&self, builder: &specs::world::LazyBuilder);
     fn boxed_clone(&self) -> Box<dyn AssemblageComponent>;
+    fn name(&self) -> &'static str;
 }
 mopafy!(AssemblageComponent);
 

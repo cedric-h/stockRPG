@@ -32,6 +32,9 @@ fn impl_assemblage_component_macro(ast: &syn::DeriveInput) -> TokenStream {
                         }
                     });
             }
+            fn name(&self) -> &'static str {
+                stringify!(#name)
+            }
             fn boxed_clone(&self) -> Box<dyn AssemblageComponent> { Box::new(self.clone()) }
         }
     };

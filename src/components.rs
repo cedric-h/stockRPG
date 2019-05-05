@@ -45,9 +45,10 @@ impl DevUiRender for Assemblaged {
 #[storage(VecStorage)]
 pub struct Interactable {
     pub message: String,
+    pub script: ScriptEvent,
 }
 impl DevUiRender for Interactable {
-    fn dev_ui_render(&mut self, ui: &imgui::Ui, _world: &specs::World) {
+    fn dev_ui_render(&mut self, ui: &imgui::Ui, world: &specs::World) {
         use imgui::*;
 
         ui.text(im_str!("Interactable"));
@@ -60,6 +61,8 @@ impl DevUiRender for Interactable {
         {
             self.message = im_message.to_str().to_owned();
         }
+
+        self.script.dev_ui_render(ui, world);
         //dbg!(self.message.as_bytes());
     }
 }
@@ -182,18 +185,69 @@ impl DevUiRender for Animation {
     AssemblageComponent,
     Serialize,
     Deserialize,
-    Clone,
     Debug,
+    Clone,
 )]
 #[storage(HashMapStorage)]
-pub struct CameraFocus {
-    pub background_color: [f32; 4],
+pub struct ScriptEvent {
+    pub function: String,
 }
-impl DevUiRender for CameraFocus {
+impl DevUiRender for ScriptEvent {
     fn dev_ui_render(&mut self, ui: &imgui::Ui, _world: &specs::World) {
         use imgui::*;
 
+        ui.text(im_str!("ScriptEvent"));
+
+        ui.text(im_str!("function name: "));
+
+        let mut im_function = ImString::with_capacity(100); //self.message.len() + 1);
+        im_function.push_str(&self.function);
+        if ui
+            .input_text(im_str!("function name input"), &mut im_function)
+            .build()
+        {
+            self.function = im_function.to_str().to_owned();
+        }
+    }
+}
+
+#[derive(
+    Default,
+    Component,
+    CopyToOtherEntity,
+    DevUiComponent,
+    AssemblageComponent,
+    Serialize,
+    Deserialize,
+    Clone,
+    Debug,
+)]
+#[storage(VecStorage)]
+pub struct CameraFocus {
+    pub background_color: [f32; 4],
+    pub zoom: f32,
+    pub interpolation_speed: f32,
+}
+impl DevUiRender for CameraFocus {
+    fn dev_ui_render(&mut self, ui: &imgui::Ui, world: &specs::World) {
+        use imgui::*;
+
         ui.text(im_str!("CameraFocus"));
+
+        ui.input_float(im_str!("follow speed"), &mut self.interpolation_speed)
+            .step(0.01)
+            .build();
+
+        if ui
+            .input_float(im_str!("zoom"), &mut self.zoom)
+            .step(0.01)
+            .build()
+        {
+            world
+                .write_resource::<LocalState>()
+                .camera
+                .set_zoom(self.zoom);
+        }
 
         ui.color_edit(im_str!("Background fill color"), &mut self.background_color)
             .format(ColorFormat::Float)
@@ -402,32 +456,14 @@ impl CopyToOtherEntity for Hitbox {
 //different than changing a hitbox that exists in a save file just laying around.
 impl DevUiComponent for Hitbox {
     fn ui_for_entity(&self, ui: &imgui::Ui, world: &specs::World, ent: &specs::Entity) {
-        use nalgebra::geometry::{Isometry, Translation, UnitQuaternion};
-        use ncollide3d::shape::Cuboid;
         let mut physes = world.write_storage::<Phys>();
         let phys = physes.get_mut(*ent).unwrap();
         let mut ps = world.write_resource::<PhysState>();
 
         if let Some(body) = ps.rigid_body(phys) {
-            let position = body.position();
             let handle = body.handle();
 
-            let mut hitbox = Hitbox {
-                position: position.translation.vector,
-                rotation: {
-                    let eulers = position.rotation.euler_angles();
-                    glm::vec3(eulers.0, eulers.1, eulers.2)
-                },
-                scale: *ps
-                    .collider(&phys)
-                    .unwrap()
-                    .shape()
-                    .as_shape::<Cuboid<f32>>()
-                    .unwrap()
-                    .half_extents(),
-                density: 1.0,
-                physics_interaction: ps.do_physics_interact(&phys),
-            };
+            let mut hitbox = ps.hitbox_from_phys(&phys);
             let old_hitbox = hitbox.clone();
 
             hitbox.dev_ui_render(&ui, &world);

@@ -30,13 +30,9 @@ impl Assemblager {
         }
     }
 
-    pub fn register_component<T: AssemblageComponent>(
-        &mut self,
-        component_key: String,
-        component: T,
-    ) {
+    pub fn register_component<T: AssemblageComponent>(&mut self, component: T) {
         self.components
-            .insert(ImString::new(component_key), Box::new(component));
+            .insert(ImString::new(component.name()), Box::new(component));
     }
 
     fn get_json(world: &specs::World, entity: Entity) -> String {
@@ -48,13 +44,7 @@ impl Assemblager {
         let ps = world.read_resource::<PhysState>();
         for (phys, ent) in (&world.read_storage::<Phys>(), &world.entities()).join() {
             if ent == entity {
-                let hitbox = Hitbox {
-                    position: *ps.location(phys).unwrap(),
-                    rotation: ps.euler_vec(phys).unwrap(),
-                    scale: *ps.scale(phys).unwrap(),
-                    density: 1.0,
-                    physics_interaction: ps.do_physics_interact(phys),
-                };
+                let hitbox = ps.hitbox_from_phys(&phys);
 
                 output.push_str("{\"Hitbox\":");
                 output.push_str(&serde_json::to_string(&hitbox).unwrap());

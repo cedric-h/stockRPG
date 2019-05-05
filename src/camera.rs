@@ -39,11 +39,15 @@ impl Camera {
         self.quat
     }
 
+    pub fn set_zoom(&mut self, zoom: f32) {
+        self.offset = glm::vec3(0.0, 55.0, 22.5) * zoom;
+    }
+
     /// Makes a new camera at the position specified and an identity orientation.
     pub fn at_position(position: glm::TVec3<f32>) -> Self {
         let mut cam = Self {
             position,
-            offset: glm::vec3(0.0, 55.0, 22.5) * 0.5,
+            offset: glm::vec3(0.0, 0.0, 0.0),
             quat: glm::quat_normalize(&glm::quat(
                 -0.8260998,
                 -0.004217835,
@@ -52,6 +56,7 @@ impl Camera {
             )),
             view_matrix: glm::identity(),
         };
+        cam.set_zoom(1.0);
         cam.update_view_matrix();
         cam
     }

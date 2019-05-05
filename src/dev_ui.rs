@@ -1,3 +1,8 @@
+//general
+use crate::prelude::*;
+use specs::LazyUpdate;
+
+//imgui-rs setup stuff
 //imgui
 use imgui::{FontGlyphRange, ImFontConfig, ImGui, ImVec4, Ui};
 use imgui_gfx_renderer::{Renderer, Shaders};
@@ -12,6 +17,364 @@ use gfx_device_gl::{CommandBuffer, Resources};
 use gfx_window_glutin;
 //glutin
 use glutin;
+
+//this boi needs world access because he'll have to access storages dynamically
+pub struct DevUiUpdate {
+    dev_ui: DevUiState,
+}
+impl DevUiUpdate {
+    pub fn new() -> Self {
+        Self {
+            dev_ui: DevUiState::new(),
+        }
+    }
+
+    pub fn run(&mut self, world: &specs::World) {
+        use imgui::*;
+        use specs::Join;
+
+        //resources
+        let mut compium = world.write_resource::<Compendium>();
+        let mut asmblgr = world.write_resource::<Assemblager>();
+        let lu = world.read_resource::<LazyUpdate>();
+        let ents = world.entities();
+        //storages (still technically resources but you know)
+        let mut assemblaged = world.write_storage::<Assemblaged>();
+        let camera_focuses = world.read_storage::<CameraFocus>();
+        let editing_assemblage = compium.editing_assemblage.clone();
+        //extra state stuff
+        let mut open_type_from_entity_modal = false;
+
+        if let Some(CameraFocus {
+            background_color, ..
+        }) = camera_focuses.join().next()
+        {
+            self.dev_ui.clear_color = *background_color;
+        }
+
+        drop(camera_focuses);
+
+        self.dev_ui.update(|ui| {
+            ui.show_metrics_window(&mut true);
+
+            ui.with_style_var(StyleVar::WindowRounding(0.0), || {
+                ui.window(im_str!("The Compendium"))
+                    .size((375.0, 550.0), ImGuiCond::FirstUseEver)
+                    .position((25.0, 25.0), ImGuiCond::FirstUseEver)
+                    .build(|| {
+                        ui.separator();
+
+                        ui.input_text(im_str!("< Entity Query"), &mut compium.entity_query)
+                            .build();
+
+                        ui.separator();
+
+                        if ui.button(im_str!("New Type"), [85.0, 20.0]) {
+                            ui.open_popup(im_str!("Name Type"));
+                        }
+                        ui.popup_modal(im_str!("Name Type")).build(|| {
+                            ui.text("What would you like to name the new type?");
+                            ui.input_text(im_str!("< Name"), &mut compium.wip_type_name)
+                                .build();
+
+                            if ui.button(im_str!("That's it!"), (0.0, 0.0)) {
+                                asmblgr
+                                    .assemblages
+                                    .insert(compium.wip_type_name.to_str().to_string(), Vec::new());
+                                ui.close_current_popup();
+                            }
+                        });
+
+                        ui.separator();
+
+                        for (assemblage_key, _) in &asmblgr.assemblages {
+                            if ui.selectable(
+                                im_str!("{}", assemblage_key),
+                                match &compium.place_assemblage {
+                                    Some(chosen) => {
+                                        chosen.to_string() == assemblage_key.to_string()
+                                    }
+                                    _ => false,
+                                },
+                                ImGuiSelectableFlags::empty(),
+                                ImVec2::new(0.0, 0.0),
+                            ) {
+                                compium.place_assemblage = Some(assemblage_key.to_string());
+                                compium.place_me_entity =
+                                    Some(asmblgr.build(&assemblage_key, &lu, &ents));
+                            }
+
+                            if ui.is_item_hovered()
+                                && ui.imgui().is_mouse_clicked(ImMouseButton::Right)
+                            {
+                                compium.editing_assemblage = match compium.editing_assemblage {
+                                    Some(_) => None,
+                                    None => Some(assemblage_key.to_string()),
+                                }
+                            }
+                        }
+
+                        ui.separator();
+
+                        ui.text(im_str!("This...is...imgui-rs!"));
+                        let mouse_pos = ui.imgui().mouse_pos();
+                        ui.text(im_str!(
+                            "Mouse Position: ({:.1},{:.1})",
+                            mouse_pos.0,
+                            mouse_pos.1
+                        ));
+                    });
+            });
+
+            ui.window(im_str!("Dyon Console"))
+                .size((345.0, 165.0), ImGuiCond::FirstUseEver)
+                .build(|| {
+                    let dyon_console = &world.read_resource::<DyonConsole>().0;
+                    for message in dyon_console.split('\n') {
+                        ui.text(im_str!("{}", message));
+                    }
+                });
+
+            if let Some(chose_ent) = compium.chosen_entity {
+                if let Some(Assemblaged { built_from }) = assemblaged.get(chose_ent) {
+                    ui.window(im_str!("{}", built_from))
+                        .position((125.0, 300.0), ImGuiCond::FirstUseEver)
+                        .size((345.0, 165.0), ImGuiCond::FirstUseEver)
+                        .menu_bar(true)
+                        .build(|| {
+                            if ui.button(im_str!("Remove Entity"), [120.0, 20.0]) {
+                                lu.exec_mut(move |world| {
+                                    world.delete_entity(chose_ent).unwrap();
+                                });
+                                compium.chosen_entity = None;
+                            }
+
+                            ui.menu_bar(|| {
+                                ui.menu(im_str!("Type Interactions")).build(|| {
+                                    if ui.menu_item(im_str!("New type from this entity")).build() {
+                                        open_type_from_entity_modal = true;
+                                    }
+                                });
+                            });
+
+                            //built_from is the key for the assemblage this entity was built from.
+
+                            ui.separator();
+
+                            for asmblg in asmblgr.assemblages.get_mut(built_from) {
+                                for comp in asmblg.iter() {
+                                    //now to get the actual storage, you'll need to pass in the
+                                    //world too, as well as the applicable entity, because there's
+                                    //no way we can use the type of the component in question
+                                    //outside of a method on that component. but that'll just be
+                                    //changing the default macro.
+                                    //this is really dumb, but basically instead of editing the
+                                    //actual components we're iterating over, this edits the
+                                    //component of the entity provided that is the same type as
+                                    //this specific component. questionable design decision I know
+                                    comp.ui_for_entity(&ui, &world, &chose_ent);
+                                    ui.separator();
+                                }
+                            }
+                        });
+                }
+            }
+
+            //this opens the little modal window for creating new a type starting with an
+            //already existing entity.
+            if open_type_from_entity_modal {
+                ui.open_popup(im_str!("New Type From Entity"));
+            }
+            ui.popup_modal(im_str!("New Type From Entity")).build(|| {
+                ui.text("What would you like to name the new type?");
+
+                ui.input_text(im_str!("< Name"), &mut compium.wip_type_name)
+                    .build();
+
+                if ui.button(im_str!("That's it!"), (0.0, 0.0)) {
+                    //get the data about the entity that we need
+                    let chose_ent = compium.chosen_entity.unwrap();
+                    let built_from = assemblaged.get(chose_ent).unwrap().built_from.clone();
+
+                    //make the components for the new type
+                    let cloned_components = asmblgr.assemblages[&built_from]
+                        .iter()
+                        .map(|c| c.boxed_clone())
+                        .collect::<Vec<_>>();
+                    //ease of use copy of the string since it's used to make the new type and add
+                    //the entity to the new type.
+                    let assemblage_name_string = compium.wip_type_name.to_str().to_string();
+
+                    //insert the new type that was just made
+                    asmblgr
+                        .assemblages
+                        .insert(assemblage_name_string.clone(), cloned_components);
+                    //move the entity to the new type
+                    assemblaged
+                        .insert(
+                            chose_ent,
+                            Assemblaged {
+                                built_from: assemblage_name_string,
+                            },
+                        )
+                        .unwrap();
+
+                    //since we've gotten the information we needed and made the new type...
+                    ui.close_current_popup();
+                }
+            });
+
+            //THIS one on the other hand, edits the actual components stored
+            if let Some(assemblage_key) = &editing_assemblage {
+                ui.window(im_str!("Type Editor: {}", assemblage_key))
+                    .position((25.0, 100.0), ImGuiCond::FirstUseEver)
+                    .size((445.0, 345.0), ImGuiCond::FirstUseEver)
+                    .menu_bar(true)
+                    .build(|| {
+                        //https://github.com/ocornut/imgui/issues/331
+                        let mut component_remove_modal = false;
+                        let mut component_add_modal = false;
+
+                        ui.menu_bar(|| {
+                            ui.menu(im_str!("Components")).build(|| {
+                                if ui.menu_item(im_str!("New Component")).build() {
+                                    component_add_modal = true;
+                                }
+                                if ui.menu_item(im_str!("Remove Component")).build() {
+                                    component_remove_modal = true;
+                                }
+                            });
+                        });
+
+                        if component_add_modal {
+                            ui.open_popup(im_str!("Add Component"));
+                        }
+
+                        if component_remove_modal {
+                            ui.open_popup(im_str!("Remove Component"));
+                        }
+
+                        ui.popup_modal(im_str!("Add Component")).build(|| {
+                            ui.text("Which component would you like to add?");
+
+                            //I have to have this weird construct to avoid copying the entire
+                            //names_list just to avoid borrow errors. SIGH.
+                            let add_me: Option<Box<custom_component_macro::AssemblageComponent>> = {
+                                let existing_comps = asmblgr.assemblages[assemblage_key]
+                                    .iter()
+                                    .map(|x| x.name())
+                                    .collect::<Vec<_>>();
+
+                                let comp_names = asmblgr
+                                    .components
+                                    .keys()
+                                    .filter(|x| !existing_comps.contains(&x.to_str()))
+                                    .map(ImStr::new)
+                                    .collect::<Vec<_>>();
+
+                                ui.combo(
+                                    im_str!("< Component To Add"),
+                                    &mut compium.component_to_add_index,
+                                    &comp_names,
+                                    20,
+                                );
+
+                                if ui.button(im_str!("This one!"), [120.0, 20.0]) {
+                                    let index = compium.component_to_add_index as usize;
+                                    let component_name = comp_names[index];
+                                    Some(asmblgr.components[component_name].boxed_clone())
+                                } else {
+                                    None
+                                }
+                            };
+
+                            if let Some(component) = add_me {
+                                let assemblage =
+                                    asmblgr.assemblages.get_mut(assemblage_key).unwrap();
+                                assemblage.push(component);
+                                ui.close_current_popup();
+                            }
+
+                            ui.same_line(120.0 + 15.0);
+
+                            if ui.button(im_str!("Nevermind."), [120.0, 20.0]) {
+                                ui.close_current_popup();
+                            }
+                        });
+
+                        ui.popup_modal(im_str!("Remove Component")).build(|| {
+                            ui.text(im_str!("Which component would you like to remove?"));
+                            let comp_names = asmblgr.assemblages[assemblage_key]
+                                .iter()
+                                .map(|x| x.name())
+                                .collect::<Vec<_>>();
+                            let comp_strings = comp_names
+                                .iter()
+                                .map(|x| ImString::new(x.to_owned()))
+                                .collect::<Vec<_>>();
+                            let comp_strs = comp_strings.iter().map(ImStr::new).collect::<Vec<_>>();
+
+                            ui.combo(
+                                im_str!("< Component To Remove"),
+                                &mut compium.component_to_add_index,
+                                &comp_strs,
+                                5,
+                            );
+
+                            if ui.button(im_str!("This one!"), [120.0, 20.0]) {
+                                asmblgr
+                                    .assemblages
+                                    .get_mut(assemblage_key)
+                                    .unwrap()
+                                    .remove(compium.component_to_add_index as usize);
+                                ui.close_current_popup();
+                            }
+
+                            ui.same_line(120.0 + 15.0);
+
+                            if ui.button(im_str!("Nevermind."), [120.0, 20.0]) {
+                                ui.close_current_popup();
+                            }
+                        });
+                        //end of modals
+
+                        if ui.button(im_str!("Push Changes"), [140.0, 20.0]) {
+                            for (Assemblaged { built_from }, ent) in (&assemblaged, &ents).join() {
+                                if built_from == assemblage_key {
+                                    for comp in asmblgr.assemblages[assemblage_key].iter() {
+                                        comp.copy_self_to(&world, &ent);
+                                    }
+                                }
+                            }
+                        } else if ui.is_item_hovered() {
+                            ui.tooltip_text(im_str!(
+                                "This will update all instances
+of this type with these stats.
+Later each instance should just
+store how different it is from the
+original."
+                            ));
+                        }
+
+                        ui.text(im_str!("NOTE: Changes will be pushed on save."));
+                        ui.text(im_str!("If separate functionality is desired,"));
+                        ui.text(im_str!("a new type should be made."));
+
+                        ui.separator();
+                        for comp in asmblgr
+                            .assemblages
+                            .get_mut(assemblage_key)
+                            .unwrap()
+                            .iter_mut()
+                        {
+                            comp.dev_ui_render(&ui, &world);
+                            ui.separator();
+                        }
+                    });
+            }
+        });
+    }
+}
 
 pub struct DevUiState {
     events_loop: glutin::EventsLoop,

@@ -81,6 +81,17 @@ impl PhysState {
     }
 
     #[inline]
+    pub fn hitbox_from_phys(&self, phys: &Phys) -> Hitbox {
+        Hitbox {
+            position: *self.location(phys).unwrap(),
+            rotation: self.euler_vec(phys).unwrap(),
+            scale: *self.scale(phys).unwrap(),
+            density: 1.0,
+            physics_interaction: self.do_physics_interact(phys),
+        }
+    }
+
+    #[inline]
     pub fn name_as_ent(&mut self, phys: &Phys, ent_boxed: Box<specs::Entity>) {
         let body = self.world.rigid_body_mut(phys.body).unwrap();
         body.set_name((*ent_boxed).id().to_string().to_owned());

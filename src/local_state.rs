@@ -49,6 +49,17 @@ impl LocalState {
         }
     }
 
+    pub fn find_camera_focus_and_zoom(&mut self, world: &specs::World) {
+        use specs::Join;
+
+        let camera_focuses = world.read_storage::<CameraFocus>();
+        if let Some(foc) = camera_focuses.join().next() {
+            self.camera.set_zoom(foc.zoom);
+        } else {
+            info!("No camera focus found in the ECS world after loading the save file.");
+        }
+    }
+
     pub fn update_from_input(&mut self, input: UserInput) {
         if input.end_requested {
             self.quit = true;

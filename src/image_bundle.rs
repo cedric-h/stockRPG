@@ -24,7 +24,6 @@ impl ImageBundle {
                     words[4].parse::<u32>().unwrap(),
                     words[5].parse::<u32>().unwrap(),
                 ];
-                println!("{:?}", coords);
                 map.insert(name.to_string(), coords);
             }
             map

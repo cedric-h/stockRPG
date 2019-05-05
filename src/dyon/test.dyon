@@ -1,0 +1,6 @@
+fn business_greeting(entity) {
+	~ entity := entity
+
+	log("why, hello there!")
+	teleport((0, 0, 0))
+}
