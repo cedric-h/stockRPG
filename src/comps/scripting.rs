@@ -114,7 +114,7 @@ impl DevUiRender for Interactable {
                 ImVec2::new(0.0, 0.0),
             )
         }) {
-            self.ids.push(self.ids.remove(index);
+            self.ids.push(self.ids.remove(index));
         }
     }
 }
