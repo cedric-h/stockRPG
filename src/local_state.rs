@@ -18,6 +18,7 @@ pub struct LocalState {
     pub quit: bool,
     pub last_input: UserInput,
     pub tapped_keys: HashSet<winit::VirtualKeyCode>,
+    pub focused: bool,
 }
 
 impl LocalState {
@@ -46,6 +47,7 @@ impl LocalState {
             mouse_down: false,
             last_input: UserInput::default(),
             tapped_keys: std::collections::HashSet::new(),
+            focused: true,
         }
     }
 
@@ -61,21 +63,30 @@ impl LocalState {
     }
 
     pub fn update_from_input(&mut self, input: UserInput) {
+        //these events only matter if the window is focused when they're emitted.
+        //also, these are done before self.focused is updated, because sometimes
+        //mouse events return a false 0, 0, position when the click causes focus.
+        if self.focused {
+            if let Some(mouse_pos) = input.mouse_pos {
+                if mouse_pos.0 != 0.0 && mouse_pos.1 != 0.0 {
+                    self.mouse_pos = mouse_pos;
+                }
+            }
+            if let Some(mouse_down) = input.mouse_state {
+                self.mouse_down = mouse_down;
+            }
+        }
+
         if input.end_requested {
             self.quit = true;
+        }
+        if let Some(focus_state) = input.focus {
+            self.focused = focus_state;
         }
         if let Some(frame_size) = input.new_frame_size {
             self.frame_width = frame_size.0;
             self.frame_height = frame_size.1;
             self.update_perspective();
-        }
-        if let Some(mouse_pos) = input.mouse_pos {
-            if mouse_pos.0 != 0.0 && mouse_pos.1 != 0.0 {
-                self.mouse_pos = mouse_pos;
-            }
-        }
-        if let Some(mouse_down) = input.mouse_state {
-            self.mouse_down = mouse_down;
         }
         if input.swap_projection {
             self.is_orthographic = !self.is_orthographic;

@@ -11,6 +11,7 @@ pub struct UserInput {
     pub mouse_pos: Option<(f32, f32)>,
     pub mouse_state: Option<bool>,
     pub seconds: f32,
+    pub focus: Option<bool>,
 }
 
 impl UserInput {
@@ -82,6 +83,13 @@ impl UserInput {
                 ..
             } => {
                 output.mouse_state = Some(true);
+            }
+
+            Event::WindowEvent {
+                event: WindowEvent::Focused(focus_state),
+                ..
+            } => {
+                output.focus = Some(focus_state);
             }
 
             Event::WindowEvent {

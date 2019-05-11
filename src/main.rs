@@ -390,6 +390,10 @@ impl<'a> System<'a> for EditorPlaceControls {
             if let Ok(id) =
                 serde_json::from_str(&ps.world.body(clicked_body_handle).unwrap().name())
             {
+                //delete whatever they were about to place before if that's a thing
+                if let Some(old_entity) = compium.chosen_entity {
+                    entities.delete(old_entity).unwrap();
+                }
                 compium.chosen_entity = Some(entities.entity(id));
             }
         }
