@@ -632,6 +632,7 @@ fn main() {
         CameraFocus,
         Animation,
         Hitbox,
+        Health,
     );
 
     assemblager.load_save(&mut world);

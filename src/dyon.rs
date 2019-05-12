@@ -48,6 +48,99 @@ impl DyonState {
             },
         );
 
+        //set health of an entity 
+        fn set_hp(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
+
+            let ents = world.entities();
+            let ent = ents.entity(rt.current_object::<u32>("entity")?);
+            let mut health_storage = world.write_storage::<Health>();
+            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let health_value = rt.pop::<f32>()?;
+            health.value = health.max.min(health_value);
+
+            Ok(())
+        }
+        module.add(
+            Arc::new("set_hp".into()),
+            set_hp,
+            Dfn {
+                lts: vec![Lt::Default],
+                tys: vec![Type::F64],
+                ret: Type::Void,
+            },
+        );
+
+        //set health to a certain % of the current health 
+        fn set_hp_percent(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
+
+            let ents = world.entities();
+            let ent = ents.entity(rt.current_object::<u32>("entity")?);
+            let mut health_storage = world.write_storage::<Health>();
+            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let percent = rt.pop::<f32>()?;
+            health.value = health.max.min((percent / 100.0) * health.max);
+
+            Ok(())
+        }
+        module.add(
+            Arc::new("set_hp_percent".into()),
+            set_hp_percent,
+            Dfn {
+                lts: vec![Lt::Default],
+                tys: vec![Type::F64],
+                ret: Type::Void,
+            },
+        );
+
+
+        //change health of an entity 
+        fn change_hp(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
+
+            let ents = world.entities();
+            let ent = ents.entity(rt.current_object::<u32>("entity")?);
+            let mut health_storage = world.write_storage::<Health>();
+            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let health_value = rt.pop::<f32>()?;
+            health.value += health.max.min(health.value + health_value);
+
+            Ok(())
+        }
+        module.add(
+            Arc::new("change_hp".into()),
+            change_hp,
+            Dfn {
+                lts: vec![Lt::Default],
+                tys: vec![Type::F64],
+                ret: Type::Void,
+            },
+        );
+
+        //change health by a certain % of the current health 
+        fn change_hp_percent(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
+
+            let ents = world.entities();
+            let ent = ents.entity(rt.current_object::<u32>("entity")?);
+            let mut health_storage = world.write_storage::<Health>();
+            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let percent = rt.pop::<f32>()?;
+            health.value += health.max.min((percent/100.0)*health.value);
+
+            Ok(())
+        }
+        module.add(
+            Arc::new("change_hp_percent".into()),
+            change_hp_percent,
+            Dfn {
+                lts: vec![Lt::Default],
+                tys: vec![Type::F64],
+                ret: Type::Void,
+            },
+        );
+
         //log a message into the Dyon console in the DevUi
         fn log(rt: &mut Runtime) -> Result<(), String> {
             let world = unsafe { Current::<World>::new() };
