@@ -1,4 +1,4 @@
-use comp_prelude::*;
+use super::prelude::*;
 
 // rendering related components!
 
@@ -153,4 +153,3 @@ impl DevUiRender for CameraFocus {
             .build();
     }
 }
-

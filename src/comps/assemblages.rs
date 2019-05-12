@@ -1,4 +1,4 @@
-use comp_prelude::*;
+use super::prelude::*;
 
 //this component gives the compendium and save/load system a reference point for entity composition
 

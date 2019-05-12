@@ -1,4 +1,4 @@
-use comp_prelude::*;
+use super::prelude::*;
 
 #[derive(
     Component,
@@ -56,4 +56,3 @@ impl DevUiRender for Explodeable {
         self.force.dev_ui_render(ui, world);
     }
 }
-

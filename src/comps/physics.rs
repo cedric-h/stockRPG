@@ -1,4 +1,4 @@
-use comp_prelude::*;
+use super::prelude::*;
 
 // some physics components!
 

@@ -1,4 +1,4 @@
-use comp_prelude::*;
+use super::prelude::*;
 
 //scripting components
 
@@ -85,15 +85,17 @@ impl DevUiRender for ScriptEvent {
 )]
 #[storage(VecStorage)]
 pub struct ScriptingIds {
-    pub ids: Vec<String>
+    pub ids: Vec<String>,
 }
-impl DevUiRender for Interactable {
-    fn dev_ui_render(&mut self, ui: &imgui::Ui, world: &specs::World) {
+impl DevUiRender for ScriptingIds {
+    fn dev_ui_render(&mut self, ui: &imgui::Ui, _world: &specs::World) {
         use imgui::*;
 
         ui.text(im_str!("Scripting Identifiers"));
 
-        ui.input_text(im_str!("< Id to +"), &mut self.ids[self.ids.len()])
+        let mut active_id_im_string = ImString::new(self.ids[self.ids.len()].clone());
+
+        ui.input_text(im_str!("< Id to +"), &mut active_id_im_string)
             .build();
 
         if ui.button(im_str!("New"), [85.0, 20.0]) {
@@ -106,15 +108,16 @@ impl DevUiRender for Interactable {
             self.ids.pop();
         }
 
-        if let Some((_, index)) = self.ids.enumerate().find(|(id, index)| {
+        if let Some((index, _)) = self.ids.iter().enumerate().find(|(index, id)| {
             ui.selectable(
                 im_str!("{}", id),
-                (index == self.ids.len()),
+                *index == self.ids.len(),
                 ImGuiSelectableFlags::empty(),
                 ImVec2::new(0.0, 0.0),
             )
         }) {
-            self.ids.push(self.ids.remove(index));
+            let clicked = self.ids.remove(index);
+            self.ids.push(clicked);
         }
     }
 }

@@ -1,6 +1,5 @@
 #![allow(clippy::many_single_char_names)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![feature(try_from)]
 
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
@@ -8,7 +7,7 @@ use log::{debug, error, info, trace, warn};
 mod assemblages;
 mod camera;
 mod compendium;
-mod components;
+mod comps;
 mod dev_ui;
 mod dyon;
 mod hal_state;
@@ -37,8 +36,6 @@ impl<'a> System<'a> for AddHitboxesToPhys {
     );
 
     fn run(&mut self, (entities, mut physics_state, mut hitboxes, mut physes): Self::SystemData) {
-        use specs::Join;
-
         for (ent, mut hitbox) in (&*entities, hitboxes.drain()).join() {
             //get a handle to the body for the hitbox
             let phys_comp = physics_state.phys_from_hitbox(&mut hitbox);
@@ -67,7 +64,6 @@ impl<'a> System<'a> for BuildAppearances {
         (entities, image_bundle, mut appears, mut appear_builders): Self::SystemData,
     ) {
         use arraytools::ArrayTools;
-        use specs::Join;
 
         //for every AppearanceBuilder in the world, delete it, but then do
         for (ent, mut appear_builder) in (&*entities, &mut appear_builders).join() {
@@ -113,7 +109,6 @@ impl<'a> System<'a> for Exploding {
     );
 
     fn run(&mut self, (ls, assemblager, lu, ps, ents, physes, mut explodeables): Self::SystemData) {
-        use specs::Join;
         use winit::VirtualKeyCode::B;
 
         if ls.tapped_keys.contains(&B) {
@@ -178,7 +173,6 @@ impl<'a> System<'a> for ApplyForces {
             math::{Force, ForceType},
             object::Body,
         };
-        use specs::Join;
         use std::f32;
 
         (&mut forces, &physes, &ents)
@@ -227,7 +221,6 @@ impl<'a> System<'a> for Interact {
         &mut self,
         (ents, local_state, ps, physes, interactables, movement_controls, mut script_events): Self::SystemData,
     ) {
-        use specs::Join;
         use winit::VirtualKeyCode::E;
 
         //minimum distance the interactable must be at to be interacted with
@@ -307,8 +300,6 @@ impl<'a> System<'a> for KeyboardMovementControls {
                     _ => vec,
                 });
             if move_vector != glm::zero() {
-                use specs::Join;
-
                 for (phys, mov) in (&physes, &movs).join() {
                     let body = ps.rigid_body_mut(phys).unwrap();
 
@@ -433,7 +424,6 @@ impl<'a> System<'a> for PhysicsUpdate {
             math::{Force, ForceType},
             object::{Body, BodyHandle},
         };
-        use specs::{storage::ComponentEvent, Join};
 
         for event in physes
             .channel()
@@ -460,11 +450,12 @@ impl<'a> System<'a> for PhysicsUpdate {
             let lv = &body.velocity().linear;
             //perhaps replace that 0.5_f32 with a fraction of the actual velocity.
             let force = 2.0_f32.min(body.augmented_mass().linear * glm::length(lv) / timestep);
+            let linear_force = -lv.normalize() * force;
 
             if force != 0.0 {
                 body.apply_force(
                     0,
-                    &Force::linear(-lv.normalize() * force),
+                    &Force::linear(linear_force),
                     ForceType::Force,
                     true,
                 );
@@ -484,8 +475,6 @@ impl<'a> System<'a> for SpriteSheetAnimate {
     );
 
     fn run(&mut self, (mut appearances, animations, local_state): Self::SystemData) {
-        use specs::Join;
-
         for (app, ani) in (&mut appearances, &animations).join() {
             let frame_index =
                 (local_state.elapsed_time * ani.fps).floor() % (ani.frame_count as f32);
@@ -510,19 +499,14 @@ impl<'a> System<'a> for Render {
         &mut self,
         (physes, camera_focuses, appearances, mut hal_state, local_state, ps): Self::SystemData,
     ) {
-        use specs::Join;
-
         let fill = camera_focuses
             .join()
             .next()
             .map(|cf| cf.background_color)
             .unwrap_or([0.1, 0.2, 0.3, 1.0]);
 
-        let projection = if local_state.is_orthographic {
-            local_state.orthographic_projection
-        } else {
-            local_state.perspective_projection
-        };
+        let projection = local_state.perspective_projection;
+
         let view_projection = projection * local_state.camera.view_matrix;
         if let Err(e) = hal_state.draw_appearances_frame(
             &view_projection,
@@ -537,22 +521,6 @@ impl<'a> System<'a> for Render {
     }
 }
 
-struct Input {
-    winit_state: WinitState,
-}
-impl<'a> System<'a> for Input {
-    type SystemData = WriteExpect<'a, LocalState>;
-
-    fn run(&mut self, mut local_state: Self::SystemData) {
-        let inputs = UserInput::poll_events_loop(&mut self.winit_state);
-        /* if inputs.new_frame_size.is_some() {
-            debug!("Window changed size, changing HalState...");
-            hal_state.resize_swapchain();
-        }*/
-        local_state.update_from_input(inputs);
-    }
-}
-
 struct CameraLerp;
 impl<'a> System<'a> for CameraLerp {
     type SystemData = (
@@ -563,7 +531,6 @@ impl<'a> System<'a> for CameraLerp {
     );
 
     fn run(&mut self, (mut local_state, ps, physes, focuses): Self::SystemData) {
-        use specs::Join;
         let dur = local_state.last_frame_duration;
 
         for (phys, foc) in (&physes, &focuses).join() {
@@ -581,24 +548,23 @@ fn main() {
     simple_logger::init().unwrap();
 
     //-- Specs Resources:
+    //windowing stuff
+    let mut winit_state = WinitState::default();
+    let mut local_state = LocalState::from_winit_state(&winit_state);
+    let hal_state = HalState::new(&winit_state.window).unwrap_or_else(|e| panic!(e));
+    //physics
+    let physics_state = PhysState::new();
     //Developer Tools stuff
-    let mut dev_ui = DevUiUpdate::new();
+    let mut dev_ui = DevUiUpdate::new(&winit_state.events_loop);
     let compendium = Compendium::new();
     let mut dyon_state = DyonState::new();
     let dyon_console = DyonConsole::default();
     //spritesheet texture indexes
     let image_bundle = ImageBundle::new();
-    //windowing stuff
-    let winit_state = WinitState::default();
-    let mut local_state = LocalState::from_winit_state(&winit_state);
-    let hal_state = HalState::new(&winit_state.window).unwrap_or_else(|e| panic!(e));
-    //physics
-    let physics_state = PhysState::new();
 
     let mut world = World::new();
     #[rustfmt::skip]
     let mut dispatcher = DispatcherBuilder::new()
-        .with_thread_local(Input { winit_state })
         .with(AddHitboxesToPhys,            "hitboxes to phys",     &[])
         .with(ApplyForces,                  "apply forces",         &["hitboxes to phys"])
         .with(PhysicsUpdate::default(),     "physics update",       &["apply forces"])
@@ -652,14 +618,17 @@ fn main() {
     while !world.read_resource::<LocalState>().quit {
         //your everyday ECS systems are run first
         dispatcher.dispatch(&mut world.res);
-
-        //add anything the systems want to lazily add
-        world.maintain();
+        
+        //input deals with thread-bound stuff so it's not a system
+        winit_state.input(&world, &mut dev_ui.dev_ui);
 
         //the scripting system completely breaks ECS
         let specs_world_guard = CurrentGuard::new(&mut world);
         dyon_state.run();
         drop(specs_world_guard);
+
+        //the scripts and systems can add things lazily
+        world.maintain();
 
         //next, the developer UI shows us what happened
         dev_ui.run(&world);

@@ -1,4 +1,4 @@
-use comp_prelude::*;
+use super::prelude::*;
 
 #[derive(
     Default,
@@ -25,5 +25,3 @@ impl DevUiRender for MovementControls {
             .build();
     }
 }
-
-

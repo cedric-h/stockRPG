@@ -20,14 +20,14 @@ use glutin;
 
 //this boi needs world access because he'll have to access storages dynamically
 pub struct DevUiUpdate {
-    dev_ui: DevUiState,
+    pub dev_ui: DevUiState,
 }
 
 use imgui::*;
 impl DevUiUpdate {
-    pub fn new() -> Self {
+    pub fn new(events_loop: &glutin::EventsLoop) -> Self {
         Self {
-            dev_ui: DevUiState::new(),
+            dev_ui: DevUiState::new(events_loop),
         }
     }
 
@@ -47,11 +47,13 @@ impl DevUiUpdate {
         //quickly update the camera position if that needs to happen.
         let camera_focuses = world.read_storage::<CameraFocus>();
         let cam = camera_focuses.join().next();
-        if let Some(CameraFocus { background_color, .. }) = cam {
+        if let Some(CameraFocus {
+            background_color, ..
+        }) = cam
+        {
             self.dev_ui.clear_color = *background_color;
         }
         drop(camera_focuses);
-
 
         self.dev_ui.update(|ui| {
             //render the fancy compendium thing
@@ -74,7 +76,6 @@ impl DevUiUpdate {
                         open_type_from_entity_modal = Self::render_entity_editor(&ui, &world);
                     });
             }
-
 
             //show the little window with the FPS in it
             ui.show_metrics_window(&mut true);
@@ -105,9 +106,7 @@ impl DevUiUpdate {
                     .position((25.0, 100.0), ImGuiCond::FirstUseEver)
                     .size((445.0, 345.0), ImGuiCond::FirstUseEver)
                     .menu_bar(true)
-                    .build(|| {
-                        Self::render_type_editor(&ui, &world)
-                    });
+                    .build(|| Self::render_type_editor(&ui, &world));
             }
         });
     }
@@ -171,7 +170,7 @@ impl DevUiUpdate {
                     &mut compium.component_to_add_index,
                     &comp_names,
                     20,
-                    );
+                );
 
                 if ui.button(im_str!("This one!"), [120.0, 20.0]) {
                     let index = compium.component_to_add_index as usize;
@@ -183,8 +182,7 @@ impl DevUiUpdate {
             };
 
             if let Some(component) = add_me {
-                let assemblage =
-                    asmblgr.assemblages.get_mut(assemblage_key).unwrap();
+                let assemblage = asmblgr.assemblages.get_mut(assemblage_key).unwrap();
                 assemblage.push(component);
                 ui.close_current_popup();
             }
@@ -213,7 +211,7 @@ impl DevUiUpdate {
                 &mut compium.component_to_add_index,
                 &comp_strs,
                 5,
-                );
+            );
 
             if ui.button(im_str!("This one!"), [120.0, 20.0]) {
                 asmblgr
@@ -242,12 +240,12 @@ impl DevUiUpdate {
             }
         } else if ui.is_item_hovered() {
             ui.tooltip_text(im_str!(
-                    "This will update all instances\
-                                 of this type with these stats.\
-                                 Later each instance should just\
-                                 store how different it is from the\
-                                 original."
-                                 ));
+                "This will update all instances\
+                 of this type with these stats.\
+                 Later each instance should just\
+                 store how different it is from the\
+                 original."
+            ));
         }
 
         ui.text(im_str!("NOTE: Changes will be pushed on save."));
@@ -257,13 +255,13 @@ impl DevUiUpdate {
         ui.separator();
         for comp in asmblgr
             .assemblages
-                .get_mut(assemblage_key)
-                .unwrap()
-                .iter_mut()
-                {
-                    comp.dev_ui_render(&ui, &world);
-                    ui.separator();
-                }
+            .get_mut(assemblage_key)
+            .unwrap()
+            .iter_mut()
+        {
+            comp.dev_ui_render(&ui, &world);
+            ui.separator();
+        }
     }
 
     #[inline]
@@ -439,8 +437,7 @@ impl DevUiUpdate {
 }
 
 pub struct DevUiState {
-    events_loop: glutin::EventsLoop,
-    window: glutin::GlWindow,
+    pub window: glutin::GlWindow,
     encoder: gfx::Encoder<Resources, CommandBuffer>,
     device: gfx_device_gl::Device,
     factory: gfx_device_gl::Factory,
@@ -454,17 +451,16 @@ pub struct DevUiState {
 }
 
 impl DevUiState {
-    pub fn new() -> Self {
+    pub fn new(events_loop: &glutin::EventsLoop) -> Self {
         type ColorFormat = gfx::format::Rgba8;
         type DepthFormat = gfx::format::DepthStencil;
 
-        let events_loop = glutin::EventsLoop::new();
         let context = glutin::ContextBuilder::new(); //.with_vsync(true);
         let window = glutin::WindowBuilder::new()
             .with_title("Developer UI")
             .with_dimensions(glutin::dpi::LogicalSize::new(525.0, 625.0));
         let (window, device, mut factory, main_color, main_depth) =
-            gfx_window_glutin::init::<ColorFormat, DepthFormat>(window, context, &events_loop)
+            gfx_window_glutin::init::<ColorFormat, DepthFormat>(window, context, events_loop)
                 .expect("Failed to initalize graphics");
         let encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
         let shaders = {
@@ -509,6 +505,7 @@ impl DevUiState {
         // In the examples we only use integer DPI factors, because the UI can get very blurry
         // otherwise. This might or might not be what you want in a real application.
         let hidpi_factor = window.get_hidpi_factor().round();
+        dbg!(hidpi_factor);
 
         let font_size = (8.0 * hidpi_factor) as f32;
 
@@ -529,7 +526,6 @@ impl DevUiState {
         imgui_winit_support::configure_keys(&mut imgui);
 
         Self {
-            events_loop,
             window,
             encoder,
             device,
@@ -544,7 +540,7 @@ impl DevUiState {
         }
     }
 
-    pub fn update<F: FnMut(&Ui)>(&mut self, mut run_ui: F) {
+    pub fn process_event(&mut self, event: &glutin::Event) {
         let imgui = &mut self.imgui;
         let window = &mut self.window;
         let hidpi_factor = &mut self.hidpi_factor;
@@ -552,26 +548,29 @@ impl DevUiState {
         let main_depth = &mut self.main_depth;
         let renderer = &mut self.renderer;
 
-        self.events_loop.poll_events(|event| {
-            use glutin::{Event, WindowEvent::Resized};
+        use glutin::{Event, WindowEvent::Resized};
 
-            imgui_winit_support::handle_event(
-                imgui,
-                &event,
-                window.get_hidpi_factor(),
-                *hidpi_factor,
+        imgui_winit_support::handle_event(
+            imgui,
+            &event,
+            window.get_hidpi_factor(),
+            *hidpi_factor,
             );
 
-            if let Event::WindowEvent { event, .. } = event {
-                match event {
-                    Resized(_) => {
-                        gfx_window_glutin::update_views(window, main_color, main_depth);
-                        renderer.update_render_target(main_color.clone());
-                    }
-                    _ => (),
+        if let Event::WindowEvent { event, .. } = event {
+            match event {
+                Resized(_) => {
+                    gfx_window_glutin::update_views(window, main_color, main_depth);
+                    renderer.update_render_target(main_color.clone());
                 }
+                _ => (),
             }
-        });
+        }
+    }
+
+    pub fn update<F: FnMut(&Ui)>(&mut self, mut run_ui: F) {
+        let imgui = &mut self.imgui;
+        let window = &mut self.window;
 
         let now = Instant::now();
         let delta = now - self.last_frame;
