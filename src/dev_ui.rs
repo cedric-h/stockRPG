@@ -322,7 +322,9 @@ impl DevUiUpdate {
 
         //this function wouldn't have been called if this could fail
         let chose_ent = compium.chosen_entity.unwrap();
-        let Assemblaged { built_from } = assemblaged.get(chose_ent).unwrap();
+        let Assemblaged { built_from } = assemblaged
+            .get(chose_ent)
+            .expect("Somehow whatever you clicked doesn't have an assemblaged component.");
 
         if ui.button(im_str!("Remove Entity"), [120.0, 20.0]) {
             lu.exec_mut(move |world| {
