@@ -1,6 +1,9 @@
 //use crate::prelude::*;
+use crate::prelude::*;
 use std::collections::HashSet;
-use winit::{dpi::LogicalSize, CreationError, EventsLoop, VirtualKeyCode, Window, WindowBuilder};
+use winit::{
+    dpi::LogicalSize, CreationError, Event, EventsLoop, VirtualKeyCode, Window, WindowBuilder,
+};
 
 #[derive(Debug)]
 pub struct WinitState {
@@ -26,6 +29,31 @@ impl WinitState {
             window,
             keys_held: HashSet::new(),
         })
+    }
+
+    pub fn input(&mut self, world: &specs::World, dev_ui: &mut DevUiState) {
+        let mut local_state = world.write_resource::<LocalState>();
+        let mut input_frame = UserInput::default();
+        let events_loop = &mut self.events_loop;
+        let keys_held = &mut self.keys_held;
+        let game_window_id = &self.window.id();
+
+        events_loop.poll_events(|event| match event {
+            Event::WindowEvent { window_id: id, .. } => {
+                if id == *game_window_id {
+                    input_frame.process_event(&event, keys_held);
+                } else if id == dev_ui.window.id() {
+                    dev_ui.process_event(&event);
+                }
+            }
+            _ => {
+                dev_ui.process_event(&event);
+                input_frame.process_event(&event, keys_held);
+            }
+        });
+
+        input_frame.keys_held = keys_held.clone();
+        local_state.update_from_input(input_frame);
     }
 }
 

@@ -57,7 +57,9 @@ fn impl_dev_ui_component_macro(ast: &syn::DeriveInput) -> TokenStream {
         impl DevUiComponent for #name {
             fn ui_for_entity(&self, ui: &imgui::Ui, world: &specs::World, ent: &specs::Entity) {
                 let mut mes = world.write_storage::<Self>();
-                let requested = mes.get_mut(*ent).unwrap();
+                let requested = mes
+                    .get_mut(*ent)
+                    .expect("Can't find Health to render for dev_ui");
                 requested.dev_ui_render(&ui, &world);
             }
         }

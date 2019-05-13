@@ -203,15 +203,18 @@ impl DyonState {
                     let event_handler = Call::new(&script_event.function).arg(*id);
                     event_handler.run(&mut self.runtime, &Arc::clone(&module))
                 })
-                .fold(module_load_error.unwrap_or(String::new()), |mut acc, res| {
-                    match res {
-                        Err(err) => {
-                            acc.push_str(&format!(" --- ERROR --- \n{}\n\n", err));
-                        }
-                        _ => {}
-                    };
-                    acc
-                });
+                .fold(
+                    module_load_error.unwrap_or(String::new()),
+                    |mut acc, res| {
+                        match res {
+                            Err(err) => {
+                                acc.push_str(&format!(" --- ERROR --- \n{}\n\n", err));
+                            }
+                            _ => {}
+                        };
+                        acc
+                    },
+                );
 
             let world = unsafe { &*Current::<specs::World>::new() };
             let mut dyon_console = world.write_resource::<DyonConsole>();

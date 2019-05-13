@@ -5,7 +5,7 @@ authors = ["DefecateRainbows <cedhut02@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["dx12"]
+default = ["vulkan"]
 metal = ["gfx-backend-metal"]
 dx12 = ["gfx-backend-dx12"]
 dx11 = ["gfx-backend-dx11"]

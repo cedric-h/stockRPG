@@ -111,7 +111,7 @@ pub static CREATURE_BYTES: &[u8] = include_bytes!("img/spritesheet.png");
 /// It can trigger UB if you upcast from a low alignment to a higher alignment
 /// type. You'll be sad.
 pub fn cast_slice<T: Pod, U: Pod>(ts: &[T]) -> Option<&[U]> {
-    use core::mem::{align_of, size_of};
+    use core::mem::align_of;
     // Handle ZST (this all const folds)
     if size_of::<T>() == 0 || size_of::<U>() == 0 {
         if size_of::<T>() == size_of::<U>() {

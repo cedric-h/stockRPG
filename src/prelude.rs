@@ -1,7 +1,7 @@
 pub use crate::assemblages::*;
 pub use crate::camera::*;
 pub use crate::compendium::*;
-pub use crate::components::*;
+pub use crate::comps::*;
 pub use crate::dev_ui::*;
 pub use crate::dyon::*;
 pub use crate::hal_state::HalState;

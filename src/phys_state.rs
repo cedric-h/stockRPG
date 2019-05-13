@@ -197,7 +197,7 @@ impl Raycaster {
     #[inline]
     pub fn point_from_camera(screen_coords: &(f32, f32), ls: &LocalState) -> Self {
         use nalgebra::geometry::Point;
-        use ncollide3d::{query::Ray, world::CollisionGroups};
+        use ncollide3d::query::Ray;
 
         let camera = ls.camera;
         let omnigroup = CollisionGroups::new()

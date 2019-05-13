@@ -1,4 +1,4 @@
-use crate::prelude::*;
+//use crate::prelude::*;
 use std::collections::HashSet;
 use winit::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 
@@ -6,26 +6,22 @@ use winit::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode, Win
 pub struct UserInput {
     pub end_requested: bool,
     pub new_frame_size: Option<(f64, f64)>,
-    pub swap_projection: bool,
     pub keys_held: HashSet<VirtualKeyCode>,
     pub mouse_pos: Option<(f32, f32)>,
     pub mouse_state: Option<bool>,
     pub seconds: f32,
+    pub focus: Option<bool>,
 }
 
 impl UserInput {
-    pub fn poll_events_loop(winit_state: &mut WinitState) -> Self {
-        let mut output = UserInput::default();
-        // We have to manually split the borrow here. rustc, why you so dumb sometimes?
-        let events_loop = &mut winit_state.events_loop;
-        let keys_held = &mut winit_state.keys_held;
+    pub fn process_event(&mut self, event: &Event, keys_held: &mut HashSet<VirtualKeyCode>) {
         // now we actually poll those events
-        events_loop.poll_events(|event| match event {
+        match event {
             // Close when asked
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
-            } => output.end_requested = true,
+            } => self.end_requested = true,
 
             // Track all keys, all the time. Note that because of key rollover details
             // it's possible to get key released events for keys we don't think are
@@ -50,15 +46,9 @@ impl UserInput {
                 //apparently on macs we can only get key events when the window is focused,
                 //but that's fine since that's all we want anyway.
                 match state {
-                    ElementState::Pressed => keys_held.insert(code),
+                    ElementState::Pressed => keys_held.insert(*code),
                     ElementState::Released => keys_held.remove(&code),
                 };
-                if state == ElementState::Pressed {
-                    match code {
-                        VirtualKeyCode::Tab => output.swap_projection = !output.swap_projection,
-                        _ => (),
-                    }
-                }
             }
 
             Event::WindowEvent {
@@ -69,7 +59,7 @@ impl UserInput {
                     },
                 ..
             } => {
-                output.mouse_pos = Some((x as f32, y as f32));
+                self.mouse_pos = Some((*x as f32, *y as f32));
             }
 
             Event::WindowEvent {
@@ -81,7 +71,14 @@ impl UserInput {
                     },
                 ..
             } => {
-                output.mouse_state = Some(true);
+                self.mouse_state = Some(true);
+            }
+
+            Event::WindowEvent {
+                event: WindowEvent::Focused(focus_state),
+                ..
+            } => {
+                self.focus = Some(*focus_state);
             }
 
             Event::WindowEvent {
@@ -93,7 +90,7 @@ impl UserInput {
                     },
                 ..
             } => {
-                output.mouse_state = Some(false);
+                self.mouse_state = Some(false);
             }
 
             // Update our size info if the window changes size.
@@ -101,12 +98,10 @@ impl UserInput {
                 event: WindowEvent::Resized(logical),
                 ..
             } => {
-                output.new_frame_size = Some((logical.width, logical.height));
+                self.new_frame_size = Some((logical.width, logical.height));
             }
 
             _ => (),
-        });
-        output.keys_held = keys_held.clone();
-        output
+        };
     }
 }
