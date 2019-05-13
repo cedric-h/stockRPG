@@ -95,30 +95,53 @@ impl DevUiRender for ScriptingIds {
 
         let mut active_id_im_string = ImString::with_capacity(25);
         if let Some(id) = self.ids.last() {
+            info!("pushing {}", id);
             active_id_im_string.push_str(id);
         }
 
+        //this can add an id, or change an existing one.
         if ui
             .input_text(im_str!("< Id to change"), &mut active_id_im_string)
             .build()
         {
-            if self.ids.last().is_some() {
-                self.ids.pop();
+            let edited_id: String = active_id_im_string.to_str().into();
+
+            //if it has been erased, no point in doing anything
+            if edited_id.len() > 0 {
+
+                //if they're changing the last one, remove the last one
+                if self.ids.last().is_some() {
+                    self.ids.pop();
+                }
+
+                self.ids.push(edited_id);
             }
-            self.ids.push(active_id_im_string.to_str().into());
+
+            //fix this bug where we keep getting an event if the input is empty
+            //by making sure things can only get deleted if the event is actually real
+            else if let Some(id) = self.ids.last() {
+                if id.len() == 1 && edited_id.len() == 0 {
+                    self.ids.pop();
+                }
+            }
         }
 
+        //This adds a new id
         if ui.button(im_str!("New"), [85.0, 20.0]) {
             self.ids.push("new id".into());
         }
 
+        //these things can only be done if there's at least one thing
         if let Some(id) = self.ids.last() {
             ui.same_line(85.0 + 15.0);
 
-            if ui.button(im_str!("Remove"), [85.0, 20.0]) || id.len() == 0 {
-                self.ids.pop();
+            //remove the last one if they press remove or the last one's length is 0
+            dbg!(id.len());
+            if ui.button(im_str!("Remove"), [85.0, 20.0]) {
+                info!("popped off {:?}", self.ids.pop());
             }
 
+            //make names for them to click and move the name to the end if they do
             if let Some((index, _)) = self.ids.iter().enumerate().find(|(index, id)| {
                 ui.selectable(
                     im_str!("{}", id),
