@@ -2,9 +2,7 @@
 use crate::prelude::*;
 use std::collections::HashSet;
 use winit::{
-    Event, dpi::LogicalSize, CreationError,
-    EventsLoop, VirtualKeyCode, Window,
-    WindowBuilder,
+    dpi::LogicalSize, CreationError, Event, EventsLoop, VirtualKeyCode, Window, WindowBuilder,
 };
 
 #[derive(Debug)]
@@ -40,22 +38,17 @@ impl WinitState {
         let keys_held = &mut self.keys_held;
         let game_window_id = &self.window.id();
 
-        events_loop.poll_events(|event| {
-            match event {
-                Event::WindowEvent {
-                    window_id: id,
-                    ..
-                } => {
-                    if id == *game_window_id {
-                        input_frame.process_event(&event, keys_held);
-                    } else if id == dev_ui.window.id() {
-                        dev_ui.process_event(&event);
-                    }
-                },
-                _ => {
-                    dev_ui.process_event(&event);
+        events_loop.poll_events(|event| match event {
+            Event::WindowEvent { window_id: id, .. } => {
+                if id == *game_window_id {
                     input_frame.process_event(&event, keys_held);
+                } else if id == dev_ui.window.id() {
+                    dev_ui.process_event(&event);
                 }
+            }
+            _ => {
+                dev_ui.process_event(&event);
+                input_frame.process_event(&event, keys_held);
             }
         });
 

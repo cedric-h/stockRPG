@@ -93,31 +93,43 @@ impl DevUiRender for ScriptingIds {
 
         ui.text(im_str!("Scripting Identifiers"));
 
-        let mut active_id_im_string = ImString::new(self.ids[self.ids.len()].clone());
+        let mut active_id_im_string = ImString::with_capacity(25);
+        if let Some(id) = self.ids.last() {
+            active_id_im_string.push_str(id);
+        }
 
-        ui.input_text(im_str!("< Id to +"), &mut active_id_im_string)
-            .build();
+        if ui
+            .input_text(im_str!("< Id to change"), &mut active_id_im_string)
+            .build()
+        {
+            if self.ids.last().is_some() {
+                self.ids.pop();
+            }
+            self.ids.push(active_id_im_string.to_str().into());
+        }
 
         if ui.button(im_str!("New"), [85.0, 20.0]) {
             self.ids.push("new id".into());
         }
 
-        ui.same_line(85.0 + 15.0);
+        if let Some(id) = self.ids.last() {
+            ui.same_line(85.0 + 15.0);
 
-        if ui.button(im_str!("Remove"), [85.0, 20.0]) {
-            self.ids.pop();
-        }
+            if ui.button(im_str!("Remove"), [85.0, 20.0]) || id.len() == 0 {
+                self.ids.pop();
+            }
 
-        if let Some((index, _)) = self.ids.iter().enumerate().find(|(index, id)| {
-            ui.selectable(
-                im_str!("{}", id),
-                *index == self.ids.len(),
-                ImGuiSelectableFlags::empty(),
-                ImVec2::new(0.0, 0.0),
-            )
-        }) {
-            let clicked = self.ids.remove(index);
-            self.ids.push(clicked);
+            if let Some((index, _)) = self.ids.iter().enumerate().find(|(index, id)| {
+                ui.selectable(
+                    im_str!("{}", id),
+                    *index == self.ids.len(),
+                    ImGuiSelectableFlags::empty(),
+                    ImVec2::new(0.0, 0.0),
+                )
+            }) {
+                let clicked = self.ids.remove(index);
+                self.ids.push(clicked);
+            }
         }
     }
 }

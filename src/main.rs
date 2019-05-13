@@ -449,12 +449,7 @@ impl<'a> System<'a> for PhysicsUpdate {
             let linear_force = -lv.normalize() * force;
 
             if force != 0.0 {
-                body.apply_force(
-                    0,
-                    &Force::linear(linear_force),
-                    ForceType::Force,
-                    true,
-                );
+                body.apply_force(0, &Force::linear(linear_force), ForceType::Force, true);
             }
         }
 
@@ -592,6 +587,7 @@ fn main() {
     register!(
         AppearanceBuilder,
         MovementControls,
+        ScriptingIds,
         Interactable,
         ScriptEvent,
         Explodeable,
@@ -614,7 +610,7 @@ fn main() {
     while !world.read_resource::<LocalState>().quit {
         //your everyday ECS systems are run first
         dispatcher.dispatch(&mut world.res);
-        
+
         //input deals with thread-bound stuff so it's not a system
         winit_state.input(&world, &mut dev_ui.dev_ui);
 

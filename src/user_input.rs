@@ -14,11 +14,7 @@ pub struct UserInput {
 }
 
 impl UserInput {
-    pub fn process_event(
-        &mut self,
-        event: &Event,
-        keys_held: &mut HashSet<VirtualKeyCode>,
-    ) {
+    pub fn process_event(&mut self, event: &Event, keys_held: &mut HashSet<VirtualKeyCode>) {
         // now we actually poll those events
         match event {
             // Close when asked

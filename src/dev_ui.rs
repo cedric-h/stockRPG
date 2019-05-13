@@ -552,12 +552,7 @@ impl DevUiState {
 
         use glutin::{Event, WindowEvent::Resized};
 
-        imgui_winit_support::handle_event(
-            imgui,
-            &event,
-            window.get_hidpi_factor(),
-            *hidpi_factor,
-            );
+        imgui_winit_support::handle_event(imgui, &event, window.get_hidpi_factor(), *hidpi_factor);
 
         if let Event::WindowEvent { event, .. } = event {
             match event {
