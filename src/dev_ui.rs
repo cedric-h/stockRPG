@@ -127,6 +127,7 @@ impl DevUiUpdate {
         //https://github.com/ocornut/imgui/issues/331
         let mut component_remove_modal = false;
         let mut component_add_modal = false;
+        let mut should_push_changes = false;
 
         ui.menu_bar(|| {
             ui.menu(im_str!("Components")).build(|| {
@@ -184,6 +185,7 @@ impl DevUiUpdate {
             if let Some(component) = add_me {
                 let assemblage = asmblgr.assemblages.get_mut(assemblage_key).unwrap();
                 assemblage.push(component);
+                should_push_changes = true;
                 ui.close_current_popup();
             }
 
@@ -219,6 +221,7 @@ impl DevUiUpdate {
                     .get_mut(assemblage_key)
                     .unwrap()
                     .remove(compium.component_to_add_index as usize);
+                should_push_changes = true;
                 ui.close_current_popup();
             }
 
@@ -230,7 +233,7 @@ impl DevUiUpdate {
         });
         //end of modals
 
-        if ui.button(im_str!("Push Changes"), [140.0, 20.0]) {
+        if ui.button(im_str!("Push Changes"), [140.0, 20.0]) || should_push_changes {
             for (Assemblaged { built_from }, ent) in (&assemblaged, &ents).join() {
                 if built_from == assemblage_key {
                     for comp in asmblgr.assemblages[assemblage_key].iter() {
