@@ -95,7 +95,6 @@ impl DevUiRender for ScriptingIds {
 
         let mut active_id_im_string = ImString::with_capacity(25);
         if let Some(id) = self.ids.last() {
-            info!("pushing {}", id);
             active_id_im_string.push_str(id);
         }
 
@@ -108,7 +107,6 @@ impl DevUiRender for ScriptingIds {
 
             //if it has been erased, no point in doing anything
             if edited_id.len() > 0 {
-
                 //if they're changing the last one, remove the last one
                 if self.ids.last().is_some() {
                     self.ids.pop();
@@ -116,7 +114,6 @@ impl DevUiRender for ScriptingIds {
 
                 self.ids.push(edited_id);
             }
-
             //fix this bug where we keep getting an event if the input is empty
             //by making sure things can only get deleted if the event is actually real
             else if let Some(id) = self.ids.last() {
@@ -138,7 +135,7 @@ impl DevUiRender for ScriptingIds {
             //remove the last one if they press remove or the last one's length is 0
             dbg!(id.len());
             if ui.button(im_str!("Remove"), [85.0, 20.0]) {
-                info!("popped off {:?}", self.ids.pop());
+                self.ids.pop();
             }
 
             //make names for them to click and move the name to the end if they do

@@ -2,5 +2,11 @@ fn business_greeting(entity) {
 	~ entity := entity
 
 	log("why, hello there!")
-	teleport((0, 0, 0))
+	//teleport((0, 0, 0))
+
+	players := all_with_id("spawn melon collectable")
+
+	for i {
+		log(str(players[i]))
+	}
 }

@@ -24,8 +24,6 @@ impl DevUiRender for Health {
         ui.text(im_str!("Health"));
         ui.input_float(im_str!("current value"), &mut self.value)
             .build();
-        ui.input_float(im_str!("max"), &mut self.max)
-            .build();
+        ui.input_float(im_str!("max"), &mut self.max).build();
     }
 }
-

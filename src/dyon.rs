@@ -11,7 +11,7 @@ impl DyonState {
     pub fn new() -> Self {
         use current::Current;
         use dyon::{Dfn, Lt, Module, Runtime, Type};
-        use specs::World;
+        use specs::{Join, World};
         use std::sync::Arc;
 
         let mut module = Module::new();
@@ -48,14 +48,48 @@ impl DyonState {
             },
         );
 
-        //set health of an entity 
+        //get an array of things with this scripting id
+        fn all_with_id(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
+
+            let ents = world.entities();
+            let scripting_ids = world.read_storage::<ScriptingIds>();
+
+            let search_id = rt.pop::<String>()?;
+
+            rt.push(
+                (&ents, &scripting_ids)
+                    .join()
+                    //find the entities whose list of ids contain search_id
+                    .filter(|(_, ScriptingIds { ids })| ids.contains(&search_id))
+                    //we want just their specs id #
+                    .map(|(ent, _)| ent.id())
+                    //okay now vec that thing and ship it off
+                    .collect::<Vec<_>>()
+            );
+
+            Ok(())
+        }
+        module.add(
+            Arc::new("all_with_id".into()),
+            all_with_id,
+            Dfn {
+                lts: vec![Lt::Default],
+                tys: vec![Type::Text],
+                ret: Type::Array(Box::new(Type::F64)),
+            },
+        );
+
+        //set health of an entity
         fn set_hp(rt: &mut Runtime) -> Result<(), String> {
             let world = unsafe { Current::<World>::new() };
 
             let ents = world.entities();
             let ent = ents.entity(rt.current_object::<u32>("entity")?);
             let mut health_storage = world.write_storage::<Health>();
-            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let mut health = health_storage
+                .get_mut(ent)
+                .ok_or("Entity does not have health component")?;
             let health_value = rt.pop::<f32>()?;
             health.value = health.max.min(health_value);
 
@@ -71,14 +105,16 @@ impl DyonState {
             },
         );
 
-        //set health to a certain % of the current health 
+        //set health to a certain % of the current health
         fn set_hp_percent(rt: &mut Runtime) -> Result<(), String> {
             let world = unsafe { Current::<World>::new() };
 
             let ents = world.entities();
             let ent = ents.entity(rt.current_object::<u32>("entity")?);
             let mut health_storage = world.write_storage::<Health>();
-            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let mut health = health_storage
+                .get_mut(ent)
+                .ok_or("Entity does not have health component")?;
             let percent = rt.pop::<f32>()?;
             health.value = health.max.min((percent / 100.0) * health.max);
 
@@ -94,15 +130,16 @@ impl DyonState {
             },
         );
 
-
-        //change health of an entity 
+        //change health of an entity
         fn change_hp(rt: &mut Runtime) -> Result<(), String> {
             let world = unsafe { Current::<World>::new() };
 
             let ents = world.entities();
             let ent = ents.entity(rt.current_object::<u32>("entity")?);
             let mut health_storage = world.write_storage::<Health>();
-            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let mut health = health_storage
+                .get_mut(ent)
+                .ok_or("Entity does not have health component")?;
             let health_value = rt.pop::<f32>()?;
             health.value += health.max.min(health.value + health_value);
 
@@ -118,16 +155,18 @@ impl DyonState {
             },
         );
 
-        //change health by a certain % of the current health 
+        //change health by a certain % of the current health
         fn change_hp_percent(rt: &mut Runtime) -> Result<(), String> {
             let world = unsafe { Current::<World>::new() };
 
             let ents = world.entities();
             let ent = ents.entity(rt.current_object::<u32>("entity")?);
             let mut health_storage = world.write_storage::<Health>();
-            let mut health = health_storage.get_mut(ent).ok_or("Entity does not have health component")?;
+            let mut health = health_storage
+                .get_mut(ent)
+                .ok_or("Entity does not have health component")?;
             let percent = rt.pop::<f32>()?;
-            health.value += health.max.min((percent/100.0)*health.value);
+            health.value += health.max.min((percent / 100.0) * health.value);
 
             Ok(())
         }
