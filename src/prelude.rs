@@ -3,11 +3,11 @@ pub use crate::camera::*;
 pub use crate::compendium::*;
 pub use crate::comps::*;
 pub use crate::dev_ui::*;
-pub use crate::dyon::*;
 pub use crate::hal_state::HalState;
 pub use crate::image_bundle::*;
 pub use crate::local_state::*;
 pub use crate::phys_state::*;
+pub use crate::slither::*;
 pub use crate::user_input::*;
 pub use crate::winit_state::*;
 

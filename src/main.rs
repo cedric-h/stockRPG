@@ -9,11 +9,11 @@ mod camera;
 mod compendium;
 mod comps;
 mod dev_ui;
-mod dyon;
 mod hal_state;
 mod image_bundle;
 mod local_state;
 mod phys_state;
+mod slither;
 mod user_input;
 mod winit_state;
 
@@ -555,8 +555,8 @@ fn main() {
     //Developer Tools stuff
     let mut dev_ui = DevUiUpdate::new(&winit_state.events_loop);
     let compendium = Compendium::new();
-    let mut dyon_state = DyonState::new();
-    let dyon_console = DyonConsole::default();
+    let mut slither_state = SlitherState::new();
+    let slither_console = SlitherConsole::default();
     //spritesheet texture indexes
     let image_bundle = ImageBundle::new();
 
@@ -607,9 +607,9 @@ fn main() {
     assemblager.load_save(&mut world);
     local_state.find_camera_focus_and_zoom(&world);
 
+    world.add_resource(slither_console);
     world.add_resource(physics_state);
     world.add_resource(image_bundle);
-    world.add_resource(dyon_console);
     world.add_resource(assemblager);
     world.add_resource(local_state);
     world.add_resource(compendium);
@@ -624,7 +624,7 @@ fn main() {
 
         //the scripting system completely breaks ECS
         let specs_world_guard = CurrentGuard::new(&mut world);
-        dyon_state.run();
+        slither_state.run();
         drop(specs_world_guard);
 
         //the scripts and systems can add things lazily

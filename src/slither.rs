@@ -1,26 +1,37 @@
+use current::CurrentGuard;
 use std::collections::HashMap;
 use std::sync::Arc;
+
 extern crate serde;
 
-//this struct is exposed as a resource, it stores the data that's
-//shoved into the dyon console
+//SlitherData lets scripts allocate their own objects on the fly
+//and these can even be saved for when the game is closed!
+/*
 #[derive(Default)]
-pub struct DyonConsole(pub String);
+struct SlitherData {
+    cache_map: HashMap<specs::world::Index, slither::Object>,
+    cache_refs: HashMap<specs::world::Index, usize>,
+}*/
 
-//this stores everything that's needed to run Dyon code.
-pub struct DyonState {
-    runtime: dyon::Runtime,
-    module: std::sync::Arc<dyon::Module>,
-    dyon_data: HashMap<u32, DyonData>,
+//this struct is exposed as a resource, it stores the data that's
+//shoved into the slither console
+#[derive(Default)]
+pub struct SlitherConsole(pub String);
+
+//this stores everything that's needed to run Slither code.
+pub struct SlitherState {
+    agent: slither::Agent,
+    //module: std::sync::Arc<slither::Module>,
+    //slither_data: SlitherData,
 }
-impl DyonState {
+impl SlitherState {
     pub fn new() -> Self {
         use crate::prelude::*;
         use current::Current;
-        use dyon::{Dfn, Lt, Module, Runtime, Type};
-        use specs::{Join, World, LazyUpdate};
+        use slither::Agent;
+        use specs::{Join, LazyUpdate, World};
 
-        let mut module = Module::new();
+        let agent = Agent::new();
 
         //library functions
 
@@ -54,12 +65,24 @@ impl DyonState {
             },
         );
 
-        fn cache_for(rt: &mut Runtime) -> Result<(), String> {
-            let world = unsafe { Current::<World>::new() };
+        /*
+        //get the cache of saveable slither data for a certain entity
+        fn get_cache(rt: &mut Runtime) -> Result<(), String> {
+            let mut slither_data = unsafe { Current::<SlitherData>::new() };
+            let ent = rt.pop::<u32>()?;
+
+            slither_data.cache_refs.insert(ent, rt.stack.len());
+            let cache = slither_data
+                .cache_map
+                .entry(ent)
+                .or_insert(slither::Object::default());
+            rt.push(Variable::Object(Arc::clone(cache)));
+
+            Ok(())
         }
         module.add(
-            Arc::new("cache_for".into()),
-            teleport,
+            Arc::new("get_cache".into()),
+            get_cache,
             Dfn {
                 lts: vec![Lt::Default],
                 tys: vec![Type::F64],
@@ -67,28 +90,53 @@ impl DyonState {
             },
         );
 
+        //get the cache of saveable slither data for a certain entity
+        fn save_caches(rt: &mut Runtime) -> Result<(), String> {
+            let mut slither_data = unsafe { Current::<SlitherData>::new() };
+            //consolidate the borrow, otherwise a new &mut ^ that will be made each time.
+            let dd: &mut SlitherData = &mut *slither_data;
+
+            //have to collect and iter over the drain because borrow checker! :D
+            for (ent, index) in dd.cache_refs.drain() {
+                match &rt.stack[index] {
+                    Variable::Object(data) => {
+                        dd.cache_map.insert(ent, Arc::clone(&data));
+                        Ok(())
+                    }
+                    _ => Err(
+                        "Found the wrong type of variable where the cache should be!".to_owned(),
+                    ),
+                }?
+            }
+
+            Ok(())
+        }
+        module.add(
+            Arc::new("save_caches".into()),
+            save_caches,
+            Dfn {
+                lts: vec![],
+                tys: vec![],
+                ret: Type::Void,
+            },
+        );
+
         //get an array of things with this scripting id
-        fn all_with_id(rt: &mut Runtime) -> Result<(), String> {
+        slither_fn!{fn all_with_id(search_id: String) -> Vec<u32> {
             let world = unsafe { Current::<World>::new() };
 
             let ents = world.entities();
             let scripting_ids = world.read_storage::<ScriptingIds>();
 
-            let search_id = rt.pop::<String>()?;
-
-            rt.push(
-                (&ents, &scripting_ids)
-                    .join()
-                    //find the entities whose list of scripting_ids contain search_id
-                    .filter(|(_, ScriptingIds { ids })| ids.contains(&search_id))
-                    //dyon only deals with the id # of the entities, not the entity structs.
-                    .map(|(ent, _)| ent.id())
-                    //okay now vec that thing and ship it off
-                    .collect::<Vec<_>>(),
-            );
-
-            Ok(())
-        }
+            (&ents, &scripting_ids)
+                .join()
+                //find the entities whose list of scripting_ids contain search_id
+                .filter(|(_, ScriptingIds { ids })| ids.contains(&search_id))
+                //slither only deals with the id # of the entities, not the entity structs.
+                .map(|(ent, _)| ent.id())
+                //okay now vec that thing and ship it off
+                .collect::<Vec<_>>()
+        }}
         module.add(
             Arc::new("all_with_id".into()),
             all_with_id,
@@ -233,16 +281,14 @@ impl DyonState {
             },
         );
 
-        //log a message into the Dyon console in the DevUi
-        fn log(rt: &mut Runtime) -> Result<(), String> {
+        //log a message into the Slither console in the DevUi
+        slither_fn!{fn log(msg: String) {
             let world = unsafe { Current::<World>::new() };
-            let mut dyon_console = world.write_resource::<DyonConsole>();
+            let mut slither_console = world.write_resource::<SlitherConsole>();
 
             //get the message they passed as an argument to the function
-            let message: Arc<String> = rt.pop()?;
-            dyon_console.0.push_str(&format!("{}\n", &**message));
-            Ok(())
-        }
+            slither_console.0.push_str(&format!("{}\n", msg));
+        }}
         module.add(
             Arc::new("log".into()),
             log,
@@ -251,20 +297,20 @@ impl DyonState {
                 tys: vec![Type::Text],
                 ret: Type::Void,
             },
-        );
+        );*/
 
         //finally, return the instance with the filled module and runtime.
         Self {
-            runtime: Runtime::new(),
-            module: Arc::new(module),
-            dyon_data: DyonData::default(),
+            agent,
+            //module: Arc::new(module),
+            //slither_data: SlitherData::default(),
         }
     }
 
     pub fn run(&mut self) {
         use crate::prelude::*;
         use current::Current;
-        use dyon::{load, Call};
+        use slither::Value;
         use specs::Join;
 
         //I'm fairly sure this world has to be dropped
@@ -284,35 +330,51 @@ impl DyonState {
 
         //if there's actually at least one event to bother cloning the module for...
         if events_iter.peek().is_some() {
+            /*
+            //manually split the borrow for the borrow checker
+            let slither_data = &mut self.slither_data;
+            let runtime = &mut self.runtime;
+
             //reload the code containing the function they want in case they changed it
             let mut module = (*self.module).clone();
-            let module_load_error = load("src/dyon/test.dyon", &mut module)
+            let module_load_error = load("src/sl/test.sl", &mut module)
                 .err()
                 //these are almost always syntax errors but I guess they could
                 //be other things actually? whatever I'll just leave it this way.
                 .map(|x| format!(" --- SYNTAX ERROR --- \n{}\n\n", x));
-            let module = Arc::new(module);
+            let module = Arc::new(module);*/
 
-            //output
+            /*
+            //open up the SlitherData for access by the scripts
+            let slither_data_guard = CurrentGuard::new(slither_data);*/
+
+            //a (potentially massive) string of the errors this thing could've outputted.
             let output = script_events
                 .iter()
                 //call each script_event's handler, and collect the errors
-                .map(|(script_event, id)| {
-                    let event_handler = Call::new(&script_event.function).arg(*id);
-                    event_handler.run(&mut self.runtime, &Arc::clone(&module))
+                //.map(|(_script_event, id)| {
+                .map(|_| {
+                    info!("here!");
+                    let res = self.agent
+                        .run("eval", &std::fs::read_to_string("src/sl/test.sl").unwrap())
+                        .map_err(|x| Value::inspect(&self.agent, &x));
+                    info!("holy shit it compiled into probably an error");
+                    res
                 })
                 //now combine all of the errors into one,
                 .fold(
                     //starting with the errors from loading the module,
                     //or an empty string if there were none,
-                    module_load_error.unwrap_or(String::new()),
+                    String::new(),
                     //then for each script event that was run,
                     //add its error too if it emitted one.
                     |mut acc, res| {
                         match res {
                             //we only care about the errors
                             Err(err) => {
+                                info!("finna bouta push the error to the output string");
                                 acc.push_str(&format!(" --- ERROR --- \n{}\n\n", err));
+                                info!("if you don't get this message Display prolly got recurisve");
                             }
                             _ => {}
                         };
@@ -320,42 +382,52 @@ impl DyonState {
                     },
                 );
 
+            /*
+            //now that all of the modules are done accessing it,
+            drop(slither_data_guard);*/
+
             //quickly add the errors that could've been outputted to the console
             let world = unsafe { &*Current::<specs::World>::new() };
-            let mut dyon_console = world.write_resource::<DyonConsole>();
-            dyon_console.0.push_str(&output);
+            let mut slither_console = world.write_resource::<SlitherConsole>();
+            slither_console.0.push_str(&output);
         }
     }
 }
 
 //this is the fancy little struct that stores all of the data
-//for the scripts. It's formatted this way so that the data can 
+//for the scripts. It's formatted this way so that the data can
 //also be saved, when that needs to occur.
-use serde::ser::{self, Serialize, Serializer, SerializeMap, Error};
 
+/*
 #[derive(Default)]
-pub struct DyonData {
-    pub data: Box<HashMap<Arc<String>, dyon::Variable>>,
+pub struct SlitherCache {
+    pub data: slither::Object,
 }
 
-impl Serialize for DyonData {
+use serde::ser::{Error, Serialize, SerializeMap, Serializer};
+impl Serialize for SlitherCache {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: Serializer,
     {
-        use dyon::Variable::*;
+        use slither::Variable::*;
 
         let mut map = serializer.serialize_map(Some(self.data.len()))?;
 
         for (k, v) in self.data.iter() {
-            map.serialize_entry(&**k, &(match v {
-                Text(dyon_string) => Ok(dyon_string.to_string()),
-                F64(dyon_num, _) => Ok(dyon_num.to_string()),
-                Bool(dyon_bool, _) => Ok(dyon_bool.to_string()),
-                _ => Err(S::Error::custom("The game can't save a variable of that type!")),
-            }?))?;
+            map.serialize_entry(
+                &**k,
+                &(match v {
+                    Text(slither_string) => Ok(slither_string.to_string()),
+                    F64(slither_num, _) => Ok(slither_num.to_string()),
+                    Bool(slither_bool, _) => Ok(slither_bool.to_string()),
+                    _ => Err(S::Error::custom(
+                        "The game can't save a variable of that type!",
+                    )),
+                }?),
+            )?;
         }
 
         map.end()
     }
-}
+}*/

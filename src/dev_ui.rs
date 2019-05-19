@@ -81,11 +81,11 @@ impl DevUiUpdate {
             ui.show_metrics_window(&mut true);
 
             //for the scripteeronators!!!
-            ui.window(im_str!("Dyon Console"))
+            ui.window(im_str!("Slither Console"))
                 .size((270.0, 400.0), ImGuiCond::FirstUseEver)
                 .position((125.0, 300.0), ImGuiCond::FirstUseEver)
                 .build(|| {
-                    let dyon_console = &world.read_resource::<DyonConsole>().0;
+                    let dyon_console = &world.read_resource::<SlitherConsole>().0;
                     for message in dyon_console.split('\n') {
                         ui.text(im_str!("{}", message));
                     }
