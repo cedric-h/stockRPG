@@ -1,12 +1,30 @@
-fn business_greeting(entity) {
-	~ entity := entity
+fn business_greeting(chicken) {
+    ~ entity := chicken
 
-	log("why, hello there!")
-	//teleport((0, 0, 0))
 
-	players := all_with_id("spawn melon collectable")
+    //explain to the player what should be done
+    //TODO: GUI, accept/decline quest
+    log("care to collect these melons for me?")
 
-	for i {
-		log(str(players[i]))
-	}
+    
+    //just logging some stats that'll
+	//be fun to look at later.
+    chicken_data := get_cache(chicken)
+
+    if !has(chicken_data, "quests_launched") {
+        chicken_data.quests_launched := 0
+    }
+    chicken_data.quests_launched += 1
+
+	log(str(chicken_data))
+	save_caches()
+
+
+    // spawning the melons!!!
+    spawn_spots := all_with_id("spawn melon collectable")
+
+    for i len(spawn_spots) {
+        log("spawning melo at forked grass")
+        spawn_at_entity(spawn_spots[i], "melo")
+    }
 }

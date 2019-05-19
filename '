@@ -1,17 +1,6 @@
-use current::CurrentGuard;
-use dyon::Variable;
 use std::collections::HashMap;
 use std::sync::Arc;
-
 extern crate serde;
-
-//DyonData lets scripts allocate their own objects on the fly
-//and these can even be saved for when the game is closed!
-#[derive(Default)]
-struct DyonData {
-    cache_map: HashMap<specs::world::Index, dyon::Object>,
-    cache_refs: HashMap<specs::world::Index, usize>,
-}
 
 //this struct is exposed as a resource, it stores the data that's
 //shoved into the dyon console
@@ -22,16 +11,14 @@ pub struct DyonConsole(pub String);
 pub struct DyonState {
     runtime: dyon::Runtime,
     module: std::sync::Arc<dyon::Module>,
-    dyon_data: DyonData,
+    dyon_data: HashMap<u32, DyonData>,
 }
 impl DyonState {
     pub fn new() -> Self {
         use crate::prelude::*;
         use current::Current;
-        use dyon::{Dfn, Lt, Module, Runtime, Type, dyon_fn, dyon_macro_items, dyon_fn_pop};
-        use specs::{Join, LazyUpdate, World};
-
-        let runtime = Runtime::new();
+        use dyon::{Dfn, Lt, Module, Runtime, Type};
+        use specs::{Join, World, LazyUpdate};
 
         let mut module = Module::new();
 
@@ -67,23 +54,12 @@ impl DyonState {
             },
         );
 
-        //get the cache of saveable dyon data for a certain entity
-        fn get_cache(rt: &mut Runtime) -> Result<(), String> {
-            let mut dyon_data = unsafe { Current::<DyonData>::new() };
-            let ent = rt.pop::<u32>()?;
-
-            dyon_data.cache_refs.insert(ent, rt.stack.len());
-            let cache = dyon_data
-                .cache_map
-                .entry(ent)
-                .or_insert(dyon::Object::default());
-            rt.push(Variable::Object(Arc::clone(cache)));
-
-            Ok(())
+        fn cache_for(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
         }
         module.add(
-            Arc::new("get_cache".into()),
-            get_cache,
+            Arc::new("cache_for".into()),
+            teleport,
             Dfn {
                 lts: vec![Lt::Default],
                 tys: vec![Type::F64],
@@ -91,51 +67,28 @@ impl DyonState {
             },
         );
 
-        //get the cache of saveable dyon data for a certain entity
-        fn save_caches(rt: &mut Runtime) -> Result<(), String> {
-            let mut dyon_data = unsafe { Current::<DyonData>::new() };
-
-            //have to collect and iter over the drain because borrow checker! :D
-            for (ent, index) in dyon_data.cache_refs.drain().collect::<Vec<_>>().iter() {
-                match &rt.stack[*index] {
-                    Variable::Object(data) => {
-                        dyon_data.cache_map.insert(*ent, Arc::clone(data));
-                        Ok(())
-                    }
-                    _ => Err(
-                        "Found the wrong type of variable where the cache should be!".to_owned(),
-                    ),
-                }?
-            }
-
-            Ok(())
-        }
-        module.add(
-            Arc::new("save_caches".into()),
-            save_caches,
-            Dfn {
-                lts: vec![],
-                tys: vec![],
-                ret: Type::Void,
-            },
-        );
-
         //get an array of things with this scripting id
-        dyon_fn!{fn all_with_id(search_id: String) -> Vec<u32> {
+        fn all_with_id(rt: &mut Runtime) -> Result<(), String> {
             let world = unsafe { Current::<World>::new() };
 
             let ents = world.entities();
             let scripting_ids = world.read_storage::<ScriptingIds>();
 
-            (&ents, &scripting_ids)
-                .join()
-                //find the entities whose list of scripting_ids contain search_id
-                .filter(|(_, ScriptingIds { ids })| ids.contains(&search_id))
-                //dyon only deals with the id # of the entities, not the entity structs.
-                .map(|(ent, _)| ent.id())
-                //okay now vec that thing and ship it off
-                .collect::<Vec<_>>()
-        }}
+            let search_id = rt.pop::<String>()?;
+
+            rt.push(
+                (&ents, &scripting_ids)
+                    .join()
+                    //find the entities whose list of scripting_ids contain search_id
+                    .filter(|(_, ScriptingIds { ids })| ids.contains(&search_id))
+                    //dyon only deals with the id # of the entities, not the entity structs.
+                    .map(|(ent, _)| ent.id())
+                    //okay now vec that thing and ship it off
+                    .collect::<Vec<_>>(),
+            );
+
+            Ok(())
+        }
         module.add(
             Arc::new("all_with_id".into()),
             all_with_id,
@@ -281,13 +234,15 @@ impl DyonState {
         );
 
         //log a message into the Dyon console in the DevUi
-        dyon_fn!{fn log(msg: String) {
+        fn log(rt: &mut Runtime) -> Result<(), String> {
             let world = unsafe { Current::<World>::new() };
             let mut dyon_console = world.write_resource::<DyonConsole>();
 
             //get the message they passed as an argument to the function
-            dyon_console.0.push_str(&format!("{}\n", msg));
-        }}
+            let message: Arc<String> = rt.pop()?;
+            dyon_console.0.push_str(&format!("{}\n", &**message));
+            Ok(())
+        }
         module.add(
             Arc::new("log".into()),
             log,
@@ -300,7 +255,7 @@ impl DyonState {
 
         //finally, return the instance with the filled module and runtime.
         Self {
-            runtime,
+            runtime: Runtime::new(),
             module: Arc::new(module),
             dyon_data: DyonData::default(),
         }
@@ -329,10 +284,6 @@ impl DyonState {
 
         //if there's actually at least one event to bother cloning the module for...
         if events_iter.peek().is_some() {
-            //manually split the borrow for the borrow checker
-            let dyon_data = &mut self.dyon_data;
-            let runtime = &mut self.runtime;
-
             //reload the code containing the function they want in case they changed it
             let mut module = (*self.module).clone();
             let module_load_error = load("src/dyon/test.dyon", &mut module)
@@ -342,16 +293,13 @@ impl DyonState {
                 .map(|x| format!(" --- SYNTAX ERROR --- \n{}\n\n", x));
             let module = Arc::new(module);
 
-            //open up the DyonData for access by the scripts
-            let dyon_data_guard = CurrentGuard::new(dyon_data);
-
             //output
             let output = script_events
                 .iter()
                 //call each script_event's handler, and collect the errors
                 .map(|(script_event, id)| {
                     let event_handler = Call::new(&script_event.function).arg(*id);
-                    event_handler.run(runtime, &Arc::clone(&module))
+                    event_handler.run(&mut self.runtime, &Arc::clone(&module))
                 })
                 //now combine all of the errors into one,
                 .fold(
@@ -372,9 +320,6 @@ impl DyonState {
                     },
                 );
 
-            //now that all of the modules are done accessing it,
-            drop(dyon_data_guard);
-
             //quickly add the errors that could've been outputted to the console
             let world = unsafe { &*Current::<specs::World>::new() };
             let mut dyon_console = world.write_resource::<DyonConsole>();
@@ -384,39 +329,33 @@ impl DyonState {
 }
 
 //this is the fancy little struct that stores all of the data
-//for the scripts. It's formatted this way so that the data can
+//for the scripts. It's formatted this way so that the data can 
 //also be saved, when that needs to occur.
+use serde::ser::{self, Serialize, Serializer, SerializeMap, Error};
 
-/*
 #[derive(Default)]
-pub struct DyonCache {
-    pub data: dyon::Object,
+pub struct DyonData {
+    pub data: Box<HashMap<Arc<String>, dyon::Variable>>,
 }
 
-use serde::ser::{Error, Serialize, SerializeMap, Serializer};
-impl Serialize for DyonCache {
+impl Serialize for DyonData {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer,
+        S: serde::Serializer,
     {
         use dyon::Variable::*;
 
         let mut map = serializer.serialize_map(Some(self.data.len()))?;
 
         for (k, v) in self.data.iter() {
-            map.serialize_entry(
-                &**k,
-                &(match v {
-                    Text(dyon_string) => Ok(dyon_string.to_string()),
-                    F64(dyon_num, _) => Ok(dyon_num.to_string()),
-                    Bool(dyon_bool, _) => Ok(dyon_bool.to_string()),
-                    _ => Err(S::Error::custom(
-                        "The game can't save a variable of that type!",
-                    )),
-                }?),
-            )?;
+            map.serialize_entry(&**k, &(match v {
+                Text(dyon_string) => Ok(dyon_string.to_string()),
+                F64(dyon_num, _) => Ok(dyon_num.to_string()),
+                Bool(dyon_bool, _) => Ok(dyon_bool.to_string()),
+                _ => Err(S::Error::custom("The game can't save a variable of that type!")),
+            }?))?;
         }
 
         map.end()
     }
-}*/
+}

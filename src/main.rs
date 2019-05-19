@@ -331,20 +331,27 @@ impl<'a> System<'a> for EditorPlaceControls {
 
     fn run(
         &mut self,
-        (physes, local_state, entities, mut ps, mut compium, asmblgr, asmblgd): Self::SystemData,
+        (physes, ls, entities, mut ps, mut compium, asmblgr, asmblgd): Self::SystemData,
     ) {
-        let mouse_clicked_this_frame = local_state.last_input.mouse_state.unwrap_or(false);
-        let new_mouse = &local_state.last_input.mouse_pos;
+        use winit::VirtualKeyCode::G;
+        let mouse_clicked_this_frame = ls.last_input.mouse_state.unwrap_or(false);
+        let new_mouse = &ls.last_input.mouse_pos;
+
+        if let Some(ent) = compium.chosen_entity {
+            if ls.last_input.keys_held.contains(&G) {
+                compium.place_me_entity = Some(ent);
+            }
+        }
 
         if let Some(ent) = compium.place_me_entity {
             if let Some(phys) = physes.get(ent) {
-                //we could get local_state.mouse_pos, but that's simply the last known mouse_pos.
+                //we could get ls.mouse_pos, but that's simply the last known mouse_pos.
                 //we want the last_input one, since that'll tell us whether or not they moved the mouse
                 //this frame; that'll let us only move the thing when we really need to.
                 if new_mouse.is_some() || mouse_clicked_this_frame {
                     //get collision pos
-                    let mouse_pos = new_mouse.unwrap_or(local_state.mouse_pos);
-                    let raycaster = Raycaster::point_from_camera(&mouse_pos, &local_state);
+                    let mouse_pos = new_mouse.unwrap_or(ls.mouse_pos);
+                    let raycaster = Raycaster::point_from_camera(&mouse_pos, &ls);
                     let ground_collision_pos = raycaster.cast_to_ground_pos(&ps).unwrap();
 
                     //get its offset recorded in the type editor
@@ -368,7 +375,7 @@ impl<'a> System<'a> for EditorPlaceControls {
         //if we don't have anything to place, but they've clicked,
         //they're probably trying to select something.
         else if mouse_clicked_this_frame {
-            let raycaster = Raycaster::point_from_camera(&local_state.mouse_pos, &local_state);
+            let raycaster = Raycaster::point_from_camera(&ls.mouse_pos, &ls);
             let clicked_body_handle = ps
                 .world
                 .collider_world()
@@ -600,13 +607,13 @@ fn main() {
     assemblager.load_save(&mut world);
     local_state.find_camera_focus_and_zoom(&world);
 
-    world.add_resource(compendium);
-    world.add_resource(image_bundle);
-    world.add_resource(hal_state);
-    world.add_resource(local_state);
     world.add_resource(physics_state);
-    world.add_resource(assemblager);
+    world.add_resource(image_bundle);
     world.add_resource(dyon_console);
+    world.add_resource(assemblager);
+    world.add_resource(local_state);
+    world.add_resource(compendium);
+    world.add_resource(hal_state);
 
     while !world.read_resource::<LocalState>().quit {
         //your everyday ECS systems are run first

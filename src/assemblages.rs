@@ -157,9 +157,9 @@ impl Assemblager {
     ) -> Entity {
         let e = self.build(assemblage_key, lu, ents);
         lu.exec(move |world| {
-            let mut physes = world.write_storage::<Hitbox>();
-            let mut phys = physes.get_mut(e).unwrap();
-            phys.position = pos;
+            let mut hitboxes = world.write_storage::<Hitbox>();
+            let mut hitbox = hitboxes.get_mut(e).unwrap();
+            hitbox.position = pos;
         });
         e
     }
