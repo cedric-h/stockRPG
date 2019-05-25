@@ -1,4 +1,4 @@
-fn business_greeting(chicken) {
+fn business_greeting(chicken, player) {
     ~ entity := chicken
 
 
@@ -25,6 +25,16 @@ fn business_greeting(chicken) {
 
     for i len(spawn_spots) {
         log("spawning melo at forked grass")
-        spawn_at_entity(spawn_spots[i], "melo")
+        melo := spawn_at_entity(spawn_spots[i], "melo")
+		add_id_entity(melo, "melo collectable")
     }
+}
+
+fn business_collide(chicken, melo) {
+	log("hey, watch out there!")
+	if has_id_entity(melo, "melo collectable") {
+		log("Hey, that's a melo!")
+	} else {
+		log("that's no melo!")
+	}
 }

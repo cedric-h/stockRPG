@@ -28,7 +28,7 @@ impl DyonState {
     pub fn new() -> Self {
         use crate::prelude::*;
         use current::Current;
-        use dyon::{Dfn, Lt, Module, Runtime, Type, dyon_fn, dyon_macro_items, dyon_fn_pop};
+        use dyon::{dyon_fn, dyon_fn_pop, dyon_macro_items, Dfn, Lt, Module, Runtime, Type};
         use specs::{Join, LazyUpdate, World};
 
         let runtime = Runtime::new();
@@ -121,7 +121,7 @@ impl DyonState {
         );
 
         //get an array of things with this scripting id
-        dyon_fn!{fn all_with_id(search_id: String) -> Vec<u32> {
+        dyon_fn! {fn all_with_id(search_id: String) -> Vec<u32> {
             let world = unsafe { Current::<World>::new() };
 
             let ents = world.entities();
@@ -146,28 +146,81 @@ impl DyonState {
             },
         );
 
+        fn add_id_entity(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
+            let ents = world.entities();
+            let mut scripting_ids = world.write_storage::<ScriptingIds>();
+            
+            let scripting_id: String = rt.pop()?;
+            let ent_id: u32 = rt.pop()?;
+
+            let ent = ents.entity(ent_id);
+            let ent_ids = scripting_ids.get_mut(ent)
+                .ok_or("That entity doesn't exist, or doesn't/can't have scripting ids.")?;
+            ent_ids.ids.push(scripting_id);
+            Ok(())
+        }
+        module.add(
+            Arc::new("add_id_entity".into()),
+            add_id_entity,
+            Dfn {
+                lts: vec![Lt::Default, Lt::Default],
+                tys: vec![Type::F64, Type::Text],
+                ret: Type::Void,
+            },
+        );
+
+        fn has_id_entity(rt: &mut Runtime) -> Result<(), String> {
+            let world = unsafe { Current::<World>::new() };
+            let ents = world.entities();
+            let scripting_ids = world.read_storage::<ScriptingIds>();
+            
+            let scripting_id: String = rt.pop()?;
+            let ent_id: u32 = rt.pop()?;
+
+            let ent = ents.entity(ent_id);
+            match scripting_ids.get(ent) {
+                Some(ent_ids) => rt.push(ent_ids.ids.contains(&scripting_id)),
+                None => rt.push(false),
+            }
+            Ok(())
+        }
+        module.add(
+            Arc::new("has_id_entity".into()),
+            has_id_entity,
+            Dfn {
+                lts: vec![Lt::Default, Lt::Default],
+                tys: vec![Type::F64, Type::Text],
+                ret: Type::Bool,
+            },
+        );
+
         //uses the assemblager to spawn an entity right next to another one.
         fn spawn_at_entity(rt: &mut Runtime) -> Result<(), String> {
-            let world = unsafe { Current::<World>::new() };
+            let world = unsafe { &mut *Current::<World>::new() };
 
-            //resources
-            let ps = world.read_resource::<PhysState>();
-            let assemblager = world.read_resource::<Assemblager>();
-            let lu = world.read_resource::<LazyUpdate>();
-            let ents = world.entities();
+            {
+                //resources
+                let ps = world.read_resource::<PhysState>();
+                let assemblager = world.read_resource::<Assemblager>();
+                let lu = world.read_resource::<LazyUpdate>();
+                let ents = world.entities();
 
-            //storages
-            let physes = world.read_storage::<Phys>();
+                //storages
+                let physes = world.read_storage::<Phys>();
 
-            //okay now get the entity, their position, and what to spawn
-            let what_to_spawn = &rt.pop::<String>()?;
-            let ent = ents.entity(rt.pop::<u32>()?);
-            let pos = physes
-                .get(ent)
-                .and_then(|phys| ps.location(phys))
-                .ok_or("can't spawn at an entity which has no position")?;
+                //okay now get the entity, their position, and what to spawn
+                let what_to_spawn = &rt.pop::<String>()?;
+                let ent = ents.entity(rt.pop::<u32>()?);
+                let pos = physes
+                    .get(ent)
+                    .and_then(|phys| ps.location(phys))
+                    .ok_or("can't spawn at an entity which has no position")?;
 
-            assemblager.build_at(what_to_spawn, &lu, &ents, *pos);
+                rt.push(assemblager.build_at(what_to_spawn, &lu, &ents, *pos).id());
+            }
+
+            world.maintain();
             Ok(())
         }
         module.add(
@@ -176,7 +229,7 @@ impl DyonState {
             Dfn {
                 lts: vec![Lt::Default, Lt::Default],
                 tys: vec![Type::F64, Type::Text],
-                ret: Type::Void,
+                ret: Type::F64,
             },
         );
 
@@ -281,7 +334,7 @@ impl DyonState {
         );
 
         //log a message into the Dyon console in the DevUi
-        dyon_fn!{fn log(msg: String) {
+        dyon_fn! {fn log(msg: String) {
             let world = unsafe { Current::<World>::new() };
             let mut dyon_console = world.write_resource::<DyonConsole>();
 
@@ -350,8 +403,11 @@ impl DyonState {
                 .iter()
                 //call each script_event's handler, and collect the errors
                 .map(|(script_event, id)| {
-                    let event_handler = Call::new(&script_event.function).arg(*id);
+                    let event_handler = Call::new(&script_event.function)
+                        .arg(*id)
+                        .arg(script_event.payload);
                     event_handler.run(runtime, &Arc::clone(&module))
+                        .map_err(|err| format!("fn {}: \n {}", script_event.function, err))
                 })
                 //now combine all of the errors into one,
                 .fold(

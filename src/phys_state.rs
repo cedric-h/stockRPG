@@ -4,7 +4,7 @@ use nalgebra as na;
 use ncollide3d::{
     query::RayIntersection,
     shape::{Cuboid, ShapeHandle},
-    world::CollisionGroups,
+    world::{CollisionObjectHandle, CollisionGroups},
 };
 use nphysics3d::{
     object::{Body, Collider, ColliderDesc, RigidBody, RigidBodyDesc},
@@ -119,11 +119,6 @@ impl PhysState {
     }
 
     #[inline]
-    pub fn rigid_body(&self, phys: &Phys) -> Option<&RigidBody<f32>> {
-        self.world.rigid_body(phys.body)
-    }
-
-    #[inline]
     pub fn location(&self, phys: &Phys) -> Option<&Vector3<f32>> {
         Some(&self.rigid_body(phys)?.position().translation.vector)
     }
@@ -169,6 +164,17 @@ impl PhysState {
     #[inline]
     pub fn set_position(&mut self, phys: &Phys, location: &Vector3<f32>, rotation: &Vector3<f32>) {
         Self::position_body(self.rigid_body_mut(phys).unwrap(), location, rotation);
+    }
+
+    #[inline]
+    pub fn rbd_from_collider_handle(&self, h: &CollisionObjectHandle) -> Option<&RigidBody<f32>> {
+        let body_handle = self.world.collider_body_handle(*h)?;
+        self.world.rigid_body(body_handle)
+    }
+
+    #[inline]
+    pub fn rigid_body(&self, phys: &Phys) -> Option<&RigidBody<f32>> {
+        self.world.rigid_body(phys.body)
     }
 
     #[inline]

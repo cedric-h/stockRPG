@@ -56,6 +56,17 @@ impl DevUiUpdate {
         drop(camera_focuses);
 
         self.dev_ui.update(|ui| {
+            //render the right-click-a-compendium-type thing
+            //this actually has to get rendered before the compendium,
+            //or is_type_to_edit could become invalid.
+            if is_type_to_edit {
+                ui.window(im_str!("Type Editor"))
+                    .position((25.0, 100.0), ImGuiCond::FirstUseEver)
+                    .size((445.0, 345.0), ImGuiCond::FirstUseEver)
+                    .menu_bar(true)
+                    .build(|| Self::render_type_editor(&ui, &world));
+            }
+
             //render the fancy compendium thing
             ui.with_style_var(StyleVar::WindowRounding(0.0), || {
                 ui.window(im_str!("The Compendium"))
@@ -99,15 +110,6 @@ impl DevUiUpdate {
             ui.popup_modal(im_str!("New Type From Entity")).build(|| {
                 Self::render_add_type_popup(&ui, &world);
             });
-
-            //render the right-click-a-compendium-type thing
-            if is_type_to_edit {
-                ui.window(im_str!("Type Editor"))
-                    .position((25.0, 100.0), ImGuiCond::FirstUseEver)
-                    .size((445.0, 345.0), ImGuiCond::FirstUseEver)
-                    .menu_bar(true)
-                    .build(|| Self::render_type_editor(&ui, &world));
-            }
         });
     }
 
@@ -243,10 +245,10 @@ impl DevUiUpdate {
             }
         } else if ui.is_item_hovered() {
             ui.tooltip_text(im_str!(
-                "This will update all instances\
-                 of this type with these stats.\
-                 Later each instance should just\
-                 store how different it is from the\
+                "This will update all instances \
+                 of this type with these stats. \
+                 Later each instance should just \
+                 store how different it is from the \
                  original."
             ));
         }

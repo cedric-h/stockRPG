@@ -226,9 +226,9 @@ impl<'a> System<'a> for Interact {
         //minimum distance the interactable must be at to be interacted with
         if local_state.tapped_keys.contains(&E) {
             //grab the player's x and y coordinates from the physics state
-            let player_pos = {
-                let (phys, _) = (&physes, &movement_controls).join().next().unwrap();
-                ps.location(phys).unwrap().xy()
+            let (player_pos, player_ent) = {
+                let (phys, _, ent) = (&physes, &movement_controls, &ents).join().next().unwrap();
+                (ps.location(phys).unwrap().xy(), ent.id().clone())
             };
 
             let closest_interactable: Option<(&Interactable, specs::Entity)> =
@@ -262,9 +262,10 @@ impl<'a> System<'a> for Interact {
                     .1;
 
             //if an interactable was close enough, log it's message and launch the scripting event
-            if let Some((Interactable { message, script }, ent)) = closest_interactable {
-                println!("{}", &message);
-                script_events.insert(ent, script.clone()).unwrap();
+            if let Some((Interactable { script }, ent)) = closest_interactable {
+                script_events
+                    .insert(ent, script.clone_with_payload(player_ent))
+                    .unwrap();
             }
         }
     }
@@ -415,14 +416,19 @@ struct PhysicsUpdate {
     pub reader_id: Option<specs::ReaderId<specs::storage::ComponentEvent>>,
 }
 impl<'a> System<'a> for PhysicsUpdate {
-    type SystemData = (WriteExpect<'a, PhysState>, ReadStorage<'a, Phys>);
+    type SystemData = (
+        WriteExpect<'a, PhysState>,
+        ReadStorage<'a, Phys>,
+        ReadStorage<'a, EmitCollideEvent>,
+        WriteStorage<'a, ScriptEvent>,
+    );
 
     fn setup(&mut self, res: &mut specs::Resources) {
         Self::SystemData::setup(res);
         self.reader_id = Some(WriteStorage::<Phys>::fetch(&res).register_reader());
     }
 
-    fn run(&mut self, (mut ps, physes): Self::SystemData) {
+    fn run(&mut self, (mut ps, physes, collides, mut script_events): Self::SystemData) {
         use nphysics3d::{
             math::{Force, ForceType},
             object::{Body, BodyHandle},
@@ -461,6 +467,35 @@ impl<'a> System<'a> for PhysicsUpdate {
         }
 
         ps.world.step();
+
+        for contact in ps.world.contact_events() {
+            use ncollide3d::events::ContactEvent::*;
+
+            if let Started(handle_one, handle_two) = contact {
+                let ent_one = ps
+                    .rbd_from_collider_handle(handle_one)
+                    .and_then(|x| x.user_data())
+                    .and_then(|x| x.downcast_ref::<specs::Entity>())
+                    .map(|x| x.clone());
+                let ent_two = ps
+                    .rbd_from_collider_handle(handle_two)
+                    .and_then(|x| x.user_data())
+                    .and_then(|x| x.downcast_ref::<specs::Entity>())
+                    .map(|x| x.clone());
+                if let (Some(ent_one), Some(ent_two)) = (ent_one, ent_two) {
+                    if let Some(EmitCollideEvent { script }) = collides.get(ent_one) {
+                        script_events
+                            .insert(ent_one, script.clone_with_payload(ent_two.id()))
+                            .unwrap();
+                    }
+                    if let Some(EmitCollideEvent { script }) = collides.get(ent_two) {
+                        script_events
+                            .insert(ent_two, script.clone_with_payload(ent_one.id()))
+                            .unwrap();
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -594,6 +629,7 @@ fn main() {
     register!(
         AppearanceBuilder,
         MovementControls,
+        EmitCollideEvent,
         ScriptingIds,
         Interactable,
         ScriptEvent,
