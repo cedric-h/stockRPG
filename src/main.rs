@@ -451,7 +451,7 @@ impl<'a> System<'a> for PhysicsUpdate {
             let body = ps.rigid_body_mut(handle).unwrap();
 
             let lv = &body.velocity().linear;
-            //perhaps replace that 0.5_f32 with a fraction of the actual velocity.
+            //perhaps replace that 2.0_f32 with a fraction of the actual velocity.
             let force = 2.0_f32.min(body.augmented_mass().linear * glm::length(lv) / timestep);
             let linear_force = -lv.normalize() * force;
 

@@ -1,8 +1,9 @@
-use current::CurrentGuard;
+//use current::CurrentGuard;
+use slither::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
+//use std::sync::Arc;
 
-extern crate serde;
+//extern crate serde;
 
 //SlitherData lets scripts allocate their own objects on the fly
 //and these can even be saved for when the game is closed!
@@ -21,22 +22,30 @@ pub struct SlitherConsole(pub String);
 //this stores everything that's needed to run Slither code.
 pub struct SlitherState {
     agent: slither::Agent,
-    //module: std::sync::Arc<slither::Module>,
+    module: HashMap<String, Value>,
     //slither_data: SlitherData,
 }
 impl SlitherState {
     pub fn new() -> Self {
         use crate::prelude::*;
         use current::Current;
-        use slither::Agent;
-        use specs::{Join, LazyUpdate, World};
+        use slither::{Agent, BuiltinFunctionArgs};
+        //use specs::{Join, LazyUpdate, World};
+        use specs::World;
 
         let agent = Agent::new();
+        let mut module = HashMap::new();
 
         //library functions
 
         //immediately move an entity somewhere
-        fn teleport(rt: &mut Runtime) -> Result<(), String> {
+        fn teleport(args: BuiltinFunctionArgs) -> Result<Value, Value> {
+            let args_iter = args.args().iter().map(|x| x.as_f64(args.agent()));
+            if let Some(err) = args_iter.clone().find(|x| x.is_err()) {
+                err?;
+            }
+            let num_args = args_iter.map(|x| x.unwrap() as f32).collect::<Vec<_>>();
+
             let world = unsafe { Current::<World>::new() };
 
             //physics stuff
@@ -44,8 +53,8 @@ impl SlitherState {
             let mut ps = world.write_resource::<PhysState>();
             //entity stuff
             let ents = world.entities();
-            let ent = ents.entity(rt.current_object::<u32>("entity")?);
-            let coords = glm::make_vec3(&rt.pop_vec4::<[f32; 3]>()?);
+            let ent = ents.entity(num_args[0] as u32); // <-- error here
+            let coords = glm::make_vec3(&num_args[1..4]);
 
             let phys = physes
                 .get(ent)
@@ -53,19 +62,33 @@ impl SlitherState {
 
             ps.set_location(phys, &coords);
 
-            Ok(())
+            Ok(Value::Null)
         }
-        module.add(
-            Arc::new("teleport".into()),
-            teleport,
-            Dfn {
-                lts: vec![Lt::Default],
-                tys: vec![Type::Vec4],
-                ret: Type::Void,
-            },
+        module.insert(
+            "teleport".to_owned(),
+            Value::new_builtin_function(&agent, teleport),
         );
 
-        /*
+        /* else {
+                Err(Value::String(
+                    args.args()
+                        .iter()
+                        .map(|x| match x {
+                            Value::Number(float) => Ok(*float as f32),
+                            x => Err(format!("expected float, got {:?}", x)),
+                        })
+                        .fold(
+                            String::new(),
+                            |mut acc: String, err: Result<f32, String>| {
+                                if let Err(msg) = err {
+                                    acc.push_str(&format!("{}\n", &msg));
+                                }
+                                acc
+                            },
+                        ),
+                ))
+            }
+
         //get the cache of saveable slither data for a certain entity
         fn get_cache(rt: &mut Runtime) -> Result<(), String> {
             let mut slither_data = unsafe { Current::<SlitherData>::new() };
@@ -302,7 +325,7 @@ impl SlitherState {
         //finally, return the instance with the filled module and runtime.
         Self {
             agent,
-            //module: Arc::new(module),
+            module,
             //slither_data: SlitherData::default(),
         }
     }
@@ -310,7 +333,7 @@ impl SlitherState {
     pub fn run(&mut self) {
         use crate::prelude::*;
         use current::Current;
-        use slither::Value;
+        use slither::ObjectKey;
         use specs::Join;
 
         //I'm fairly sure this world has to be dropped
@@ -344,43 +367,61 @@ impl SlitherState {
                 .map(|x| format!(" --- SYNTAX ERROR --- \n{}\n\n", x));
             let module = Arc::new(module);*/
 
+            let module_load_error = self
+                .agent
+                .run("eval", &std::fs::read_to_string("src/sl/test.sl").unwrap());
+
             /*
             //open up the SlitherData for access by the scripts
             let slither_data_guard = CurrentGuard::new(slither_data);*/
 
             //a (potentially massive) string of the errors this thing could've outputted.
-            let output = script_events
-                .iter()
-                //call each script_event's handler, and collect the errors
-                //.map(|(_script_event, id)| {
-                .map(|_| {
-                    info!("here!");
-                    let res = self.agent
-                        .run("eval", &std::fs::read_to_string("src/sl/test.sl").unwrap())
-                        .map_err(|x| Value::inspect(&self.agent, &x));
-                    info!("holy shit it compiled into probably an error");
-                    res
-                })
-                //now combine all of the errors into one,
-                .fold(
-                    //starting with the errors from loading the module,
-                    //or an empty string if there were none,
-                    String::new(),
-                    //then for each script event that was run,
-                    //add its error too if it emitted one.
-                    |mut acc, res| {
-                        match res {
-                            //we only care about the errors
-                            Err(err) => {
-                                info!("finna bouta push the error to the output string");
-                                acc.push_str(&format!(" --- ERROR --- \n{}\n\n", err));
-                                info!("if you don't get this message Display prolly got recurisve");
+            let output = match module_load_error {
+                Err(e) => format!(
+                    " --- SYNTAX ERROR --- \n{}\n\n",
+                    Value::inspect(&self.agent, &e)
+                ),
+                Ok(module) => script_events
+                    .iter()
+                    //call each script_event's handler, and collect the errors
+                    .map(|(script_event, id)| {
+                        module
+                            .get(
+                                &self.agent,
+                                ObjectKey::from(script_event.function.clone().trim()),
+                            )
+                            .map_err(|_| {
+                                Value::String(format!(
+                                    "Fetch Error: Could not find function {}",
+                                    script_event.function
+                                ))
+                            })
+                            .and_then(|x| {
+                                x.call(
+                                    &self.agent,
+                                    Value::Null, //ths is null, does it think this is the argument?
+                                    vec![Value::from(*id), self.module["teleport"].clone()],
+                                )
+                            })
+                    })
+                    //now combine all of the errors into one,
+                    .fold::<String, _>(
+                        //starting with the errors from loading the module,
+                        //or an empty string if there were none,
+                        String::new(),
+                        //then for each script event that was run,
+                        //add its error too if it emitted one.
+                        |mut acc, res| {
+                            if let Err(err) = res {
+                                acc.push_str(&format!(
+                                    " --- ERROR --- \n{}\n\n",
+                                    Value::inspect(&self.agent, &err)
+                                ));
                             }
-                            _ => {}
-                        };
-                        acc
-                    },
-                );
+                            acc
+                        },
+                    ),
+            };
 
             /*
             //now that all of the modules are done accessing it,
