@@ -1,4 +1,4 @@
-//use crate::prelude::*;
+// use crate::prelude::*;
 use crate::prelude::*;
 use std::collections::HashSet;
 use winit::{
@@ -32,23 +32,40 @@ impl WinitState {
     }
 
     pub fn input(&mut self, world: &specs::World, dev_ui: &mut DevUiState) {
+        // gotta store that input somewhere, so the rest of the program can access it! :D
         let mut local_state = world.write_resource::<LocalState>();
         let mut input_frame = UserInput::default();
-        let events_loop = &mut self.events_loop;
-        let keys_held = &mut self.keys_held;
-        let game_window_id = &self.window.id();
 
-        events_loop.poll_events(|event| match event {
-            Event::WindowEvent { window_id: id, .. } => {
-                if id == *game_window_id {
-                    input_frame.process_event(&event, keys_held);
-                } else if id == dev_ui.window.id() {
-                    dev_ui.process_event(&event);
-                }
-            }
-            _ => {
-                dev_ui.process_event(&event);
-                input_frame.process_event(&event, keys_held);
+        // manually split borrow
+        let events_loop = &mut self.events_loop;
+        let window = &self.window;
+        let keys_held = &mut self.keys_held;
+
+        // sometimes I wonder why imgui doesn't just record this and be done with it.
+        let dpi_factor = self.window.get_hidpi_factor().round();
+
+        //this is mostly just resize if needed.
+        dev_ui.other_input_processing(window);
+
+        events_loop.poll_events(|event| {
+            dev_ui.process_event(&event, dpi_factor);
+
+            if let Event::WindowEvent {
+                event: win_event, ..
+            } = event
+            {
+                // this probably won't crash, don't worry
+                let io = unsafe { &*imgui::sys::igGetIO() };
+
+                match win_event {
+                    winit::WindowEvent::KeyboardInput { .. } if io.want_capture_keyboard => {}
+
+                    winit::WindowEvent::MouseInput { .. }
+                    | winit::WindowEvent::MouseWheel { .. }
+                        if io.want_capture_mouse => {}
+
+                    _ => input_frame.process_event(&win_event, keys_held),
+                };
             }
         });
 
@@ -65,8 +82,8 @@ impl Default for WinitState {
         Self::new(
             "stockRPG",
             LogicalSize {
-                width: 800.0,
-                height: 600.0,
+                width: 1366.0,
+                height: 768.0,
             },
         )
         .expect("Could not create a window!")

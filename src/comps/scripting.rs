@@ -156,11 +156,10 @@ impl DevUiRender for ScriptingIds {
         }
 
         //these things can only be done if there's at least one thing
-        if let Some(id) = self.ids.last() {
+        if self.ids.last().is_some() {
             ui.same_line(85.0 + 15.0);
 
             //remove the last one if they press remove or the last one's length is 0
-            dbg!(id.len());
             if ui.button(im_str!("Remove"), [85.0, 20.0]) {
                 self.ids.pop();
             }

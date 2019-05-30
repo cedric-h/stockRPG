@@ -55,9 +55,9 @@ impl LocalState {
     }
 
     pub fn update_from_input(&mut self, input: UserInput) {
-        //these events only matter if the window is focused when they're emitted.
-        //also, these are done before self.focused is updated, because sometimes
-        //mouse events return a false 0, 0, position when the click causes focus.
+        // these events only matter if the window is focused when they're emitted.
+        // also, these are done before self.focused is updated, because sometimes
+        // mouse events return a false 0, 0, position when the click causes focus.
         if self.focused {
             if let Some(mouse_pos) = input.mouse_pos {
                 if mouse_pos.0 != 0.0 && mouse_pos.1 != 0.0 {
@@ -89,9 +89,9 @@ impl LocalState {
         self.elapsed_time += duration;
         self.last_frame_duration = duration;
 
-        //figure out which keys were just tapped based on the keys that were pressed last frame and
-        //the keys that are pressed now. if a key is pressed now, but it wasn't pressed last frame,
-        //well it'd have to be fresh pressed, yeah? and that's the best coffee.
+        // figure out which keys were just tapped based on the keys that were pressed last frame and
+        // the keys that are pressed now. if a key is pressed now, but it wasn't pressed last frame,
+        // well it'd have to be fresh pressed, yeah? and that's the best coffee.
         self.tapped_keys.clear();
         for key in &input.keys_held {
             if !self.last_input.keys_held.contains(key) {
@@ -100,7 +100,7 @@ impl LocalState {
         }
 
         self.last_input = input;
-        //self.camera.update_position(&input.keys_held, 5.0 * duration);
+        // self.camera.update_position(&input.keys_held, 5.0 * duration);
     }
     pub fn update_perspective(&mut self) {
         self.perspective_projection =

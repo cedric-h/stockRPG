@@ -5,7 +5,8 @@ use super::prelude::*;
 #[derive(Debug, Clone, Component)]
 #[storage(VecStorage)]
 pub struct Appearance {
-    pub uv_rect: [f32; 4],
+    pub uvs: [f32; 4],
+    pub size: [f32; 2],
 }
 
 #[derive(
@@ -14,7 +15,8 @@ pub struct Appearance {
 #[storage(VecStorage)]
 pub struct AppearanceBuilder {
     pub image_name: String,
-    pub uv_override: [f32; 4],
+    pub uv_adjust: [f32; 2],
+    pub size_override: [f32; 2],
     pub built: bool,
 }
 //AnimationBuilder is weird, because they aren't actually used for anything, and are immediately
@@ -27,7 +29,7 @@ impl DevUiComponent for AppearanceBuilder {
 
         ui.text(im_str!("Appearance"));
 
-        for (index, coord) in app.uv_rect.iter().enumerate() {
+        for (index, coord) in app.uvs.iter().enumerate() {
             ui.label_text(im_str!("uv coordinate #{}", index), im_str!("{}", coord));
         }
     }
@@ -66,15 +68,14 @@ impl DevUiRender for AppearanceBuilder {
             self.image_name = image_im_str_names[name_index as usize].to_str().to_owned();
         }
 
-        let size: &mut [f32; 2] = &mut [self.uv_override[2], self.uv_override[3]];
-        ui.input_float(im_str!("uv coord 1"), &mut self.uv_override[0])
+        ui.input_float(im_str!("uv adjust x"), &mut self.uv_adjust[0])
             .step(32.0)
             .build();
-        ui.input_float(im_str!("uv coord 2"), &mut self.uv_override[1])
+        ui.input_float(im_str!("uv adjust y"), &mut self.uv_adjust[1])
             .step(32.0)
             .build();
-        ui.drag_float2(im_str!("uv size"), size).build();
-        self.uv_override = [self.uv_override[0], self.uv_override[1], size[0], size[1]];
+        ui.drag_float2(im_str!("uv size"), &mut self.size_override)
+            .build();
     }
 }
 

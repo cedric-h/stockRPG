@@ -177,7 +177,7 @@ impl Assemblager {
     }
 }
 
-//ease of use thing so you don't have to pass LazyUpdate and EntitiesRes each and every time.
+// ease of use thing so you don't have to pass LazyUpdate and EntitiesRes each and every time.
 #[allow(dead_code)]
 pub struct Spawner<'a> {
     assemblager: &'a mut Assemblager,

@@ -1,40 +1,66 @@
 fn business_greeting(chicken, player) {
-    ~ entity := chicken
+
+    c_cache := get_cache_entity(chicken)
+	log("hey kid, bring me those melons!")
 
 
-    //explain to the player what should be done
-    //TODO: GUI, accept/decline quest
-    log("care to collect these melons for me?")
-
-    
-    //just logging some stats that'll
-	//be fun to look at later.
-    chicken_data := get_cache(chicken)
-
-    if !has(chicken_data, "quests_launched") {
-        chicken_data.quests_launched := 0
+    // just logging some stats that'll
+	// be fun to look at later.
+    if !has(c_cache, "quests_launched") {
+        c_cache.quests_launched := 0
     }
-    chicken_data.quests_launched += 1
+    c_cache.quests_launched += 1
 
-	log(str(chicken_data))
+
+	// if the quest isn't active, spawn the melos!
+	if !has(c_cache, "quest_active") || !c_cache.quest_active {
+		// all entities with that id!
+		spawn_spots := all_with_id("spawn melo collectable")
+
+		// at every spawn spot...
+		for i len(spawn_spots) {
+			// make a melo...
+			melo := spawn_at_entity(spawn_spots[i], "melo")
+			// and give it this scripting id
+			add_id_entity(melo, "melo collectable")
+		}
+
+		// the game is now afoot!
+		c_cache.quest_active := true
+
+		// I'm just interested in seeing how many
+		// melos will be collected over time.
+		if !has(c_cache, "melos_collected") {
+			c_cache.melos_collected := 0
+		}
+	}
+
+
 	save_caches()
-
-
-    // spawning the melons!!!
-    spawn_spots := all_with_id("spawn melon collectable")
-
-    for i len(spawn_spots) {
-        log("spawning melo at forked grass")
-        melo := spawn_at_entity(spawn_spots[i], "melo")
-		add_id_entity(melo, "melo collectable")
-    }
 }
 
 fn business_collide(chicken, melo) {
-	log("hey, watch out there!")
+
+    c_cache := get_cache_entity(chicken)
+
+
+	// if what we've collided with is a melo,
 	if has_id_entity(melo, "melo collectable") {
-		log("Hey, that's a melo!")
-	} else {
-		log("that's no melo!")
+		log("om nom nom")
+		// delete that bad boy
+		delete_entity(melo)
+		// log that!
+		c_cache.melos_collected += 1
+
+		// see if that's the last point they needed to win.
+		if len(all_with_id("melo collectable")) == 0 {
+			//woohoo!
+			log("It's over, boys.")
+			// this will the quest start over.
+			c_cache.quest_active = false
+		}
 	}
+
+
+	save_caches()
 }

@@ -5,11 +5,14 @@ authors = ["DefecateRainbows <cedhut02@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["vulkan"]
-metal = ["gfx-backend-metal"]
-dx12 = ["gfx-backend-dx12"]
-dx11 = ["gfx-backend-dx11"]
-vulkan = ["gfx-backend-vulkan"]
+default = []
+metal = ["wgpu/metal"]
+dx11 = ["wgpu/dx11"]
+dx12 = ["wgpu/dx12"]
+vulkan = ["wgpu/vulkan"]
+
+[profile.dev]
+debug-assertions = false
 
 [dependencies]
 # custom derive macro.
@@ -27,11 +30,9 @@ boolinator = "2.4.0"
 # logging
 log = "0.4.0"
 simple_logger = "1.0"
-# window creation
-winit = "0.18"
-# graphics
-gfx-hal = "0.1"
-shaderc = "0.3"
+# graphics/window
+wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git" }
+glsl-to-spirv = "0.1"
 image = "0.21"
 # physics
 nalgebra-glm = { version = "0.4.0", features = ["serde-serialize"] }
@@ -42,14 +43,11 @@ nphysics3d = "0.11"
 specs = { path = "./specs/", features = ["nightly"]}
 specs-derive = { path = "./specs/specs-derive", version = "0.4.0" }
 # dev window dependencies
-gfx = "0.17"
-gfx_device_gl = "0.15"
-gfx_window_glutin = "0.28"
-glutin = "0.19"
-imgui = "0.0.22"
-imgui-gfx-renderer = "0.0.22"
-imgui-winit-support = "0.0.22"
+imgui = "0.0.23"
+imgui-winit-support = "0.0.23"
+imgui-wgpu = { path = "./imgui-wgpu-rs/" }
 arraytools = "0.1.5"
+# scripting
 dyon = "0.42.0"
 current = "0.1.2"
 

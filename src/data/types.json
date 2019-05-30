@@ -1,1 +1,595 @@
-{"small tree":[{"Hitbox":{"position":[0.0,0.0,0.25],"rotation":[0.0,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"small_tree","uv_override":[0.0,0.0,16.0,16.0],"built":false}}],"forked grass":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[1.5707964,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"forked_grass","uv_override":[0.0,0.0,16.0,16.0],"built":false}},{"ScriptingIds":{"ids":[]}}],"melon gib":[{"AppearanceBuilder":{"image_name":"melon_gib_1","uv_override":[0.0,0.0,0.0,0.0],"built":false}},{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[0.0,0.0,0.0],"scale":[0.1,0.1,0.1],"density":1.0,"physics_interaction":true}}],"normal chicken":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[0.0,0.0,0.0],"scale":[0.25,0.25,0.5],"density":1.0,"physics_interaction":true}},{"AppearanceBuilder":{"image_name":"normal_chicken","uv_override":[0.0,0.0,32.0,32.0],"built":false}},{"Animation":{"frame_count":5,"fps":12.0}},{"Interactable":{"script":{"function":"test","payload":0}}}],"tiny tree":[{"Hitbox":{"position":[0.0,0.0,0.2],"rotation":[0.0,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"tiny_tree","uv_override":[0.0,0.0,16.0,16.0],"built":false}}],"melo":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[0.0,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":true}},{"AppearanceBuilder":{"image_name":"melo","uv_override":[0.0,0.0,16.0,16.0],"built":false}}],"thin grass":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[1.5707964,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"thin_grass","uv_override":[0.0,0.0,16.0,16.0],"built":false}}],"player":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[0.0,0.0,0.0],"scale":[0.25,0.25,0.5],"density":1.0,"physics_interaction":true}},{"AppearanceBuilder":{"image_name":"player","uv_override":[0.0,0.0,32.0,32.0],"built":false}},{"MovementControls":{"speed":6.0}},{"CameraFocus":{"background_color":[0.042,0.148,0.056,1.0],"zoom":0.555,"interpolation_speed":1.62}},{"Animation":{"frame_count":4,"fps":12.0}},{"Health":{"value":10.0,"max":10.0}}],"road":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[1.5707964,0.0,0.0],"scale":[0.4,0.4,0.01],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"bridge_path","uv_override":[0.0,0.0,32.0,32.0],"built":false}}],"clump plant":[{"Hitbox":{"position":[0.0,0.0,0.2],"rotation":[0.0,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"clump_plant","uv_override":[0.0,0.0,16.0,16.0],"built":false}}],"wooden tile":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[1.5707964,0.0,0.0],"scale":[0.4,0.4,0.01],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"wooden_floor","uv_override":[0.0,0.0,32.0,32.0],"built":false}}],"business chicken":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[0.0,0.0,0.0],"scale":[0.25,0.25,0.5],"density":1.0,"physics_interaction":true}},{"AppearanceBuilder":{"image_name":"business_chicken","uv_override":[0.0,0.0,32.0,32.0],"built":false}},{"Animation":{"frame_count":5,"fps":12.0}},{"Interactable":{"script":{"function":"business_greeting","payload":0}}},{"EmitCollideEvent":{"script":{"function":"business_collide","payload":0}}}],"thick grass":[{"Hitbox":{"position":[0.0,0.0,0.0],"rotation":[1.5707964,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"thick_grass","uv_override":[0.0,0.0,16.0,16.0],"built":false}}],"brocolli":[{"Hitbox":{"position":[0.0,0.0,0.2],"rotation":[0.0,0.0,0.0],"scale":[0.2,0.2,0.2],"density":1.0,"physics_interaction":false}},{"AppearanceBuilder":{"image_name":"broccoli","uv_override":[0.0,0.0,16.0,16.0],"built":false}}]}
+{
+    "brocolli": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.2
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "broccoli",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        }
+    ],
+    "business chicken": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": true,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.25,
+                    0.25,
+                    0.5
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "business_chicken",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    32.0,
+                    32.0
+                ]
+            }
+        },
+        {
+            "Animation": {
+                "fps": 12.0,
+                "frame_count": 5
+            }
+        },
+        {
+            "Interactable": {
+                "script": {
+                    "function": "business_greeting",
+                    "payload": 0
+                }
+            }
+        },
+        {
+            "EmitCollideEvent": {
+                "script": {
+                    "function": "business_collide",
+                    "payload": 0
+                }
+            }
+        }
+    ],
+    "clump plant": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.2
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "clump_plant",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        }
+    ],
+    "forked grass": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    1.5707964,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "forked_grass",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        },
+        {
+            "ScriptingIds": {
+                "ids": []
+            }
+        }
+    ],
+    "melo": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": true,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "melo",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        },
+        {
+            "ScriptingIds": {
+                "ids": []
+            }
+        }
+    ],
+    "melon gib": [
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "melon_gib_1",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    0.0,
+                    0.0
+                ]
+            }
+        },
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": true,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.1,
+                    0.1,
+                    0.1
+                ]
+            }
+        }
+    ],
+    "normal chicken": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": true,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.25,
+                    0.25,
+                    0.5
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "normal_chicken",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    32.0,
+                    32.0
+                ]
+            }
+        },
+        {
+            "Animation": {
+                "fps": 12.0,
+                "frame_count": 5
+            }
+        },
+        {
+            "Interactable": {
+                "script": {
+                    "function": "test",
+                    "payload": 0
+                }
+            }
+        }
+    ],
+    "player": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": true,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.25,
+                    0.25,
+                    0.5
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "player",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    32.0,
+                    32.0
+                ]
+            }
+        },
+        {
+            "MovementControls": {
+                "speed": 6.0
+            }
+        },
+        {
+            "CameraFocus": {
+                "background_color": [
+                    0.042,
+                    0.148,
+                    0.056,
+                    1.0
+                ],
+                "interpolation_speed": 1.62,
+                "zoom": 0.555
+            }
+        },
+        {
+            "Animation": {
+                "fps": 12.0,
+                "frame_count": 4
+            }
+        },
+        {
+            "Health": {
+                "max": 10.0,
+                "value": 10.0
+            }
+        }
+    ],
+    "road": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    1.5707964,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.4,
+                    0.4,
+                    0.01
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "bridge_path",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    32.0,
+                    32.0
+                ]
+            }
+        }
+    ],
+    "small tree": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.25
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "small_tree",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        }
+    ],
+    "thick grass": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    1.5707964,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "thick_grass",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        }
+    ],
+    "thin grass": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    1.5707964,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "thin_grass",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        }
+    ],
+    "tiny tree": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.2
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.2,
+                    0.2,
+                    0.2
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "tiny_tree",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    16.0,
+                    16.0
+                ]
+            }
+        }
+    ],
+    "wooden tile": [
+        {
+            "Hitbox": {
+                "density": 1.0,
+                "physics_interaction": false,
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    1.5707964,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.4,
+                    0.4,
+                    0.01
+                ]
+            }
+        },
+        {
+            "AppearanceBuilder": {
+                "built": false,
+                "image_name": "wooden_floor",
+                "uv_adjust": [
+                    0.0,
+                    0.0
+		],
+		"size_override": [
+                    32.0,
+                    32.0
+                ]
+            }
+        }
+    ]
+}

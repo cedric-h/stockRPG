@@ -4,7 +4,7 @@ use nalgebra as na;
 use ncollide3d::{
     query::RayIntersection,
     shape::{Cuboid, ShapeHandle},
-    world::{CollisionObjectHandle, CollisionGroups},
+    world::{CollisionGroups, CollisionObjectHandle},
 };
 use nphysics3d::{
     object::{Body, Collider, ColliderDesc, RigidBody, RigidBodyDesc},
@@ -58,10 +58,10 @@ impl PhysState {
     }
 
     pub fn phys_from_hitbox(&mut self, hitbox: &mut Hitbox) -> Phys {
-        //the scale acts as the hitbox's dimensions,
+        // the scale acts as the hitbox's dimensions,
         let shape_handle = ShapeHandle::new(Cuboid::new(hitbox.scale));
         let collider_desc = ColliderDesc::new(shape_handle)
-            //.translation(Vector3::z() * hitbox.scale.z/2.0)
+            // .translation(Vector3::z() * hitbox.scale.z/2.0)
             .density(hitbox.density)
             .collision_groups(if hitbox.physics_interaction {
                 self.can_collide_group
