@@ -2,17 +2,13 @@ mod draw_data;
 mod game_renderer;
 mod helper;
 
-pub use draw_data::*;
 use crate::prelude::*;
+pub use draw_data::*;
 use game_renderer::GameRenderer;
 
 pub static IMG_BYTES: &[u8] = include_bytes!("../img/spritesheet.png");
 
 pub struct WgpuState {
-    #[allow(dead_code)]
-    instance: wgpu::Instance,
-    #[allow(dead_code)]
-    adapter: wgpu::Adapter,
     game_renderer: GameRenderer,
     imgui_renderer: imgui_wgpu::Renderer,
     device: wgpu::Device,
@@ -66,8 +62,6 @@ impl WgpuState {
             Self {
                 game_renderer,
                 imgui_renderer,
-                instance,
-                adapter,
                 device,
                 surface,
                 swap_chain,

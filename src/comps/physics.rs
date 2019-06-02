@@ -114,39 +114,43 @@ impl CopyToOtherEntity for Hitbox {
 //different than changing a hitbox that exists in a save file just laying around.
 impl DevUiComponent for Hitbox {
     fn ui_for_entity(&self, ui: &imgui::Ui, world: &specs::World, ent: &specs::Entity) {
+        use imgui::*;
         let mut physes = world.write_storage::<Phys>();
-        let phys = physes.get_mut(*ent).unwrap();
-        let mut ps = world.write_resource::<PhysState>();
+        if let Some(phys) = physes.get_mut(*ent) {
+            let mut ps = world.write_resource::<PhysState>();
 
-        if let Some(body) = ps.rigid_body(phys) {
-            let handle = body.handle();
+            if let Some(body) = ps.rigid_body(phys) {
+                let handle = body.handle();
 
-            let mut hitbox = ps.hitbox_from_phys(&phys);
-            let old_hitbox = hitbox.clone();
+                let mut hitbox = ps.hitbox_from_phys(&phys);
+                let old_hitbox = hitbox.clone();
 
-            hitbox.dev_ui_render(&ui, &world);
+                hitbox.dev_ui_render(&ui, &world);
 
-            //if the dev ui changed the component,
-            if hitbox != old_hitbox {
-                //for scale and physics_interaction, we need to rebuild the entire Phys, but if
-                //position's all they've changed, we can just move them.
-                if hitbox.scale == old_hitbox.scale
-                    && hitbox.physics_interaction == old_hitbox.physics_interaction
-                {
-                    ps.set_position(&phys, &hitbox.position, &hitbox.rotation);
-                } else {
-                    //we completely obliterate that peon
-                    ps.world.remove_bodies(&[handle]);
+                //if the dev ui changed the component,
+                if hitbox != old_hitbox {
+                    //for scale and physics_interaction, we need to rebuild the entire Phys, but if
+                    //position's all they've changed, we can just move them.
+                    if hitbox.scale == old_hitbox.scale
+                        && hitbox.physics_interaction == old_hitbox.physics_interaction
+                    {
+                        ps.set_position(&phys, &hitbox.position, &hitbox.rotation);
+                    } else {
+                        //we completely obliterate that peon
+                        ps.world.remove_bodies(&[handle]);
 
-                    //aaand make a new one
-                    let phys_comp = ps.phys_from_hitbox(&mut hitbox);
-                    //add the entity as some user data so that when we find it via raycasting
-                    //we can detect it for what it is.
-                    ps.name_as_ent(&phys_comp, Box::new(*ent));
-                    //add the new physics body to the world.
-                    physes.insert(*ent, phys_comp).unwrap();
+                        //aaand make a new one
+                        let phys_comp = ps.phys_from_hitbox(&mut hitbox);
+                        //add the entity as some user data so that when we find it via raycasting
+                        //we can detect it for what it is.
+                        ps.name_as_ent(&phys_comp, Box::new(*ent));
+                        //add the new physics body to the world.
+                        physes.insert(*ent, phys_comp).unwrap();
+                    }
                 }
             }
+        } else {
+            ui.text(im_str!("No Phys data found; cannot make hitbox data!"));
         }
     }
 }

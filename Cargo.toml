@@ -6,10 +6,10 @@ edition = "2018"
 
 [features]
 default = []
-metal = ["wgpu/metal"]
-dx11 = ["wgpu/dx11"]
-dx12 = ["wgpu/dx12"]
-vulkan = ["wgpu/vulkan"]
+metal = ["wgpu/metal", "nuklear-backend-wgpurs/metal"]
+dx11 = ["wgpu/dx11", "nuklear-backend-wgpurs/dx11"]
+dx12 = ["wgpu/dx12", "nuklear-backend-wgpurs/dx12"]
+vulkan = ["wgpu/vulkan", "nuklear-backend-wgpurs/vulkan"]
 
 [profile.dev]
 debug-assertions = false
@@ -26,6 +26,7 @@ mopa = "0.2.2"
 typetag = "0.1.1"
 rand = "0.6"
 arrayvec = "0.4"
+arraytools = "0.1.5"
 boolinator = "2.4.0"
 # logging
 log = "0.4.0"
@@ -46,7 +47,9 @@ specs-derive = { path = "./specs/specs-derive", version = "0.4.0" }
 imgui = "0.0.23"
 imgui-winit-support = "0.0.23"
 imgui-wgpu = { path = "./imgui-wgpu-rs/" }
-arraytools = "0.1.5"
+# game UI deps
+nuklear-rust = {version = "~0.6", features = ["rust_allocator"]}
+nuklear-backend-wgpurs = "~0.1"
 # scripting
 dyon = "0.42.0"
 current = "0.1.2"

@@ -213,7 +213,7 @@ impl Raycaster {
         let ray = Ray::new(
             Point::from(camera.position + camera.offset),
             glm::unproject(
-                &glm::vec3(screen_coords.0, screen_coords.1, -1.0),
+                &glm::vec3(screen_coords.0, screen_coords.1, 1.0),
                 &glm::inverse(&glm::quat_to_mat4(&camera.get_quat())),
                 &ls.perspective_projection,
                 glm::vec4(0.0, 0.0, ls.frame_width as f32, ls.frame_height as f32),

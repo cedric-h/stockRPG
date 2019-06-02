@@ -23,14 +23,16 @@ pub struct AppearanceBuilder {
 //turned into Animations when detected
 impl DevUiComponent for AppearanceBuilder {
     fn ui_for_entity(&self, ui: &imgui::Ui, world: &specs::World, ent: &specs::Entity) {
-        let mut appearances = world.write_storage::<Appearance>();
-        let app = appearances.get_mut(*ent).unwrap();
         use imgui::*;
+        let mut appearances = world.write_storage::<Appearance>();
+        if let Some(app) = appearances.get_mut(*ent) {
+            ui.text(im_str!("Appearance"));
 
-        ui.text(im_str!("Appearance"));
-
-        for (index, coord) in app.uvs.iter().enumerate() {
-            ui.label_text(im_str!("uv coordinate #{}", index), im_str!("{}", coord));
+            for (index, coord) in app.uvs.iter().enumerate() {
+                ui.label_text(im_str!("uv coordinate #{}", index), im_str!("{}", coord));
+            }
+        } else {
+            ui.text(im_str!("Cannot find appearance data!"));
         }
     }
 }
@@ -152,5 +154,28 @@ impl DevUiRender for CameraFocus {
         ui.color_edit(im_str!("Background fill color"), &mut self.background_color)
             .format(ColorFormat::Float)
             .build();
+    }
+}
+
+#[derive(
+    Component,
+    CopyToOtherEntity,
+    DevUiComponent,
+    AssemblageComponent,
+    Serialize,
+    Deserialize,
+    Default,
+    Clone,
+    Debug,
+)]
+pub struct BoxOutline {
+    pub color: [f32; 3],
+    pub fade: [f32; 4],
+}
+
+impl DevUiRender for BoxOutline {
+    fn dev_ui_render(&mut self, ui: &imgui::Ui, _world: &specs::World) {
+        use imgui::*;
+        ui.text(im_str!("BoxOutline"));
     }
 }

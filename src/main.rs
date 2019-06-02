@@ -35,8 +35,8 @@ impl<'a> System<'a> for AddHitboxesToPhys {
         WriteStorage<'a, Phys>,
     );
 
-    fn run(&mut self, (entities, mut physics_state, mut hitboxes, mut physes): Self::SystemData) {
-        for (ent, mut hitbox) in (&*entities, hitboxes.drain()).join() {
+    fn run(&mut self, (ents, mut physics_state, mut hitboxes, mut physes): Self::SystemData) {
+        for (ent, mut hitbox) in (&*ents, hitboxes.drain()).join() {
             // get a handle to the body for the hitbox
             let phys_comp = physics_state.phys_from_hitbox(&mut hitbox);
 
@@ -62,12 +62,12 @@ impl<'a> System<'a> for BuildAppearances {
 
     fn run(
         &mut self,
-        (entities, image_bundle, sss, mut appears, mut appear_builders): Self::SystemData,
+        (ents, image_bundle, sss, mut appears, mut appear_builders): Self::SystemData,
     ) {
         use arraytools::ArrayTools;
 
         // for every AppearanceBuilder in the world,
-        for (ent, mut appear_builder) in (&*entities, &mut appear_builders).join() {
+        for (ent, mut appear_builder) in (&*ents, &mut appear_builders).join() {
             if !appear_builder.built {
                 appear_builder.built = true;
                 if let Some(base_u32) = image_bundle.map.get(&appear_builder.image_name) {
@@ -85,13 +85,13 @@ impl<'a> System<'a> for BuildAppearances {
                             Appearance {
                                 // uv coordinates are relative to the spritesheet size.
                                 uvs: [
-                                    start[0]/sss.x,
-                                    start[1]/sss.y,
-                                    (start[0] + size[0])/sss.x,
-                                    (start[1] + size[1])/sss.y,
+                                    start[0] / sss.x,
+                                    start[1] / sss.y,
+                                    (start[0] + size[0]) / sss.x,
+                                    (start[1] + size[1]) / sss.y,
                                 ],
                                 // the size of things is based on how many pixels they have.
-                                size: size.map(|x| x/64.0),
+                                size: size.map(|x| x / 64.0),
                             },
                         )
                         .unwrap();
@@ -331,61 +331,65 @@ impl<'a> System<'a> for KeyboardMovementControls {
 struct EditorPlaceControls;
 impl<'a> System<'a> for EditorPlaceControls {
     type SystemData = (
-        ReadStorage<'a, Phys>,
-        ReadExpect<'a, LocalState>,
-        Entities<'a>,
+        WriteStorage<'a, BoxOutline>,
         WriteExpect<'a, PhysState>,
         WriteExpect<'a, Compendium>,
-        ReadExpect<'a, Assemblager>,
+        ReadStorage<'a, Phys>,
         ReadStorage<'a, Assemblaged>,
+        Entities<'a>,
+        ReadExpect<'a, LocalState>,
+        ReadExpect<'a, Assemblager>,
     );
 
     fn run(
         &mut self,
-        (physes, ls, entities, mut ps, mut compium, asmblgr, asmblgd): Self::SystemData,
+        (mut outlines, mut ps, mut compium, physes, asmblgd, ents, ls, asmblgr): Self::SystemData,
     ) {
         use winit::VirtualKeyCode::G;
         let mouse_clicked_this_frame = ls.last_input.mouse_state.unwrap_or(false);
         let new_mouse = &ls.last_input.mouse_pos;
 
-        if let Some(ent) = compium.chosen_entity {
-            if ls.last_input.keys_held.contains(&G) {
-                compium.place_me_entity = Some(ent);
+        if let Some(ent) = compium.get_chosen_ent() {
+            //toggle mouselock when they press G
+            if ls.tapped_keys.contains(&G) {
+                compium.mouselock_chosen_ent = !compium.mouselock_chosen_ent;
+            }
+
+            if compium.mouselock_chosen_ent {
+                if let Some(phys) = physes.get(ent) {
+                    // we could get ls.mouse_pos, but that's simply the last known mouse_pos.
+                    // we want the last_input one, since that'll tell us whether or not they
+                    // moved the mouse this frame; that'll let us only move the thing when we
+                    // really need to.
+                    if new_mouse.is_some() || mouse_clicked_this_frame {
+                        // get collision pos
+                        let mouse_pos = new_mouse.unwrap_or(ls.mouse_pos);
+                        let raycaster = Raycaster::point_from_camera(&mouse_pos, &ls);
+                        let ground_collision_pos = raycaster.cast_to_ground_pos(&ps).unwrap();
+
+                        // get its offset recorded in the type editor
+                        let Assemblaged { built_from } = asmblgd.get(ent).unwrap();
+                        let hitbox = asmblgr.assemblages[built_from]
+                            .iter()
+                            .find(|x| x.name() == "Hitbox")
+                            .unwrap()
+                            .downcast_ref::<Hitbox>()
+                            .unwrap();
+
+                        // set the location to the combination of the two
+                        ps.set_location(&phys, &(ground_collision_pos + hitbox.position));
+                    }
+
+                    if mouse_clicked_this_frame {
+                        compium.mouselock_chosen_ent = false;
+                    }
+                }
             }
         }
 
-        if let Some(ent) = compium.place_me_entity {
-            if let Some(phys) = physes.get(ent) {
-                // we could get ls.mouse_pos, but that's simply the last known mouse_pos.
-                // we want the last_input one, since that'll tell us whether or not they moved the mouse
-                // this frame; that'll let us only move the thing when we really need to.
-                if new_mouse.is_some() || mouse_clicked_this_frame {
-                    // get collision pos
-                    let mouse_pos = new_mouse.unwrap_or(ls.mouse_pos);
-                    let raycaster = Raycaster::point_from_camera(&mouse_pos, &ls);
-                    let ground_collision_pos = raycaster.cast_to_ground_pos(&ps).unwrap();
-
-                    // get its offset recorded in the type editor
-                    let Assemblaged { built_from } = asmblgd.get(ent).unwrap();
-                    let hitbox = asmblgr.assemblages[built_from]
-                        .iter()
-                        .find(|x| x.name() == "Hitbox")
-                        .unwrap()
-                        .downcast_ref::<Hitbox>()
-                        .unwrap();
-
-                    // set the location to the combination of the two
-                    ps.set_location(&phys, &(ground_collision_pos + hitbox.position));
-                }
-
-                if mouse_clicked_this_frame {
-                    compium.place_me_entity = None;
-                }
-            }
-        }
         // if we don't have anything to place, but they've clicked,
         // they're probably trying to select something.
-        else if mouse_clicked_this_frame {
+        if mouse_clicked_this_frame && !compium.mouselock_chosen_ent {
             let raycaster = Raycaster::point_from_camera(&ls.mouse_pos, &ls);
             let clicked_body_handle = ps
                 .world
@@ -399,7 +403,7 @@ impl<'a> System<'a> for EditorPlaceControls {
             if let Ok(id) =
                 serde_json::from_str(&ps.world.body(clicked_body_handle).unwrap().name())
             {
-                compium.chosen_entity = Some(entities.entity(id));
+                compium.choose_ent(ents.entity(id), &ents, &mut outlines);
             }
         }
     }
@@ -524,7 +528,7 @@ impl<'a> System<'a> for SpriteSheetAnimate {
                 (local_state.elapsed_time * ani.fps).floor() % (ani.frame_count as f32);
 
             let x_size = app.size[0] * 64.0;
-            app.uvs[0] = (x_size * frame_index         ) / sss.x;
+            app.uvs[0] = (x_size * frame_index) / sss.x;
             app.uvs[2] = (x_size * frame_index + x_size) / sss.x;
         }
     }
@@ -561,11 +565,10 @@ fn main() {
     let mut winit_state = WinitState::default();
     let mut local_state = LocalState::from_winit_state(&winit_state);
     // Developer Tools stuff
-    let mut dev_ui = DevUiUpdate::new(&winit_state.window);
+    let mut dev_ui = DevUiState::new(&winit_state.window);
     let compendium = Compendium::new();
     // rendering
-    let (mut wgpu_state, spritesheet_size) =
-        WgpuState::new(&winit_state.window, &mut dev_ui.dev_ui.imgui);
+    let (mut wgpu_state, spritesheet_size) = WgpuState::new(&winit_state.window, &mut dev_ui.imgui);
     // Dyon
     let mut dyon_state = DyonState::new();
     let dyon_console = DyonConsole::default();
@@ -603,6 +606,7 @@ fn main() {
 
     world.register::<Assemblaged>();
     world.register::<Appearance>();
+    world.register::<BoxOutline>();
     world.register::<Phys>();
     register!(
         AppearanceBuilder,
@@ -631,7 +635,7 @@ fn main() {
 
     while !world.read_resource::<LocalState>().quit {
         // input deals with thread-bound stuff so it's not a system
-        winit_state.input(&world, &mut dev_ui.dev_ui);
+        winit_state.input(&world, &mut dev_ui);
 
         // your everyday ECS systems are run first
         dispatcher.dispatch(&mut world.res);
