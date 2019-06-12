@@ -352,7 +352,7 @@ pub struct DevUiState {
 }
 
 impl DevUiState {
-    pub fn new(window: &winit::Window) -> Self {
+    pub fn new(window: &glutin::Window) -> Self {
         let hidpi_factor = window.get_hidpi_factor().round();
 
         let mut imgui = ImGui::init();
@@ -379,13 +379,13 @@ impl DevUiState {
         }
     }
 
-    pub fn other_input_processing(&mut self, window: &winit::Window) {
+    pub fn other_input_processing(&mut self, window: &glutin::Window) {
         imwinit::update_mouse_cursor(&self.imgui, window);
         self.frame_size =
             imwinit::get_frame_size(window, window.get_hidpi_factor().round()).unwrap();
     }
 
-    pub fn process_event(&mut self, event: &winit::Event, dpi_factor: f64) {
+    pub fn process_event(&mut self, event: &glutin::Event, dpi_factor: f64) {
         let imgui = &mut self.imgui;
 
         imwinit::handle_event(imgui, &event, dpi_factor, dpi_factor);

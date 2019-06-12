@@ -4,15 +4,15 @@ version = "0.1.0"
 authors = ["DefecateRainbows <cedhut02@gmail.com>"]
 edition = "2018"
 
-[features]
-default = []
-metal = ["wgpu/metal", "nuklear-backend-wgpurs/metal"]
-dx11 = ["wgpu/dx11", "nuklear-backend-wgpurs/dx11"]
-dx12 = ["wgpu/dx12", "nuklear-backend-wgpurs/dx12"]
-vulkan = ["wgpu/vulkan", "nuklear-backend-wgpurs/vulkan"]
+# [features]
+# default = []
+# metal = ["wgpu/metal", "nuklear-backend-wgpurs/metal"]
+# dx11 = ["wgpu/dx11", "nuklear-backend-wgpurs/dx11"]
+# dx12 = ["wgpu/dx12", "nuklear-backend-wgpurs/dx12"]
+# vulkan = ["wgpu/vulkan", "nuklear-backend-wgpurs/vulkan"]
 
 [profile.dev]
-debug-assertions = false
+debug-assertions = true
 
 [dependencies]
 # custom derive macro.
@@ -32,8 +32,10 @@ boolinator = "2.4.0"
 log = "0.4.0"
 simple_logger = "1.0"
 # graphics/window
-wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git" }
-glsl-to-spirv = "0.1"
+glium = "^0.23"
+glutin = "^0.21.0"
+# wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git" }
+# glsl-to-spirv = "0.1"
 image = "0.21"
 # physics
 nalgebra-glm = { version = "0.4.0", features = ["serde-serialize"] }
@@ -46,10 +48,11 @@ specs-derive = { path = "./specs/specs-derive", version = "0.4.0" }
 # dev window dependencies
 imgui = "0.0.23"
 imgui-winit-support = "0.0.23"
-imgui-wgpu = { path = "./imgui-wgpu-rs/" }
+imgui-glium-renderer = "0.0.23"
+# imgui-wgpu = { path = "./imgui-wgpu-rs/" }
 # game UI deps
-nuklear-rust = {version = "~0.6", features = ["rust_allocator"]}
-nuklear-backend-wgpurs = "~0.1"
+# nuklear-rust = {version = "~0.6", features = ["rust_allocator"]}
+# nuklear-backend-wgpurs = "~0.1"
 # scripting
 dyon = "0.42.0"
 current = "0.1.2"

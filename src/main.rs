@@ -10,12 +10,14 @@ mod compendium;
 mod comps;
 mod dev_ui;
 mod dyon;
+mod glium;
+mod glutin_state;
 mod image_bundle;
 mod local_state;
 mod phys_state;
 mod user_input;
-mod wgpu;
-mod winit_state;
+//mod wgpu;
+//mod winit_state;
 
 mod prelude;
 use crate::prelude::*;
@@ -119,7 +121,7 @@ impl<'a> System<'a> for Exploding {
     );
 
     fn run(&mut self, (ls, assemblager, lu, ps, ents, physes, mut explodeables): Self::SystemData) {
-        use winit::VirtualKeyCode::B;
+        use glutin::VirtualKeyCode::B;
 
         if ls.tapped_keys.contains(&B) {
             info!("kerboom!");
@@ -231,7 +233,7 @@ impl<'a> System<'a> for Interact {
         &mut self,
         (ents, local_state, ps, physes, interactables, movement_controls, mut script_events): Self::SystemData,
     ) {
-        use winit::VirtualKeyCode::E;
+        use glutin::VirtualKeyCode::E;
 
         // minimum distance the interactable must be at to be interacted with
         if local_state.tapped_keys.contains(&E) {
@@ -296,7 +298,7 @@ impl<'a> System<'a> for KeyboardMovementControls {
             object::Body,
         };
 
-        use winit::VirtualKeyCode;
+        use glutin::VirtualKeyCode;
         let keys = &local_state.last_input.keys_held;
         if !keys.contains(&VirtualKeyCode::LControl) {
             let vertical = glm::vec3(0.0, 1.0, 0.0);
@@ -345,7 +347,7 @@ impl<'a> System<'a> for EditorPlaceControls {
         &mut self,
         (mut outlines, mut ps, mut compium, physes, asmblgd, ents, ls, asmblgr): Self::SystemData,
     ) {
-        use winit::VirtualKeyCode::G;
+        use glutin::VirtualKeyCode::G;
         let mouse_clicked_this_frame = ls.last_input.mouse_state.unwrap_or(false);
         let new_mouse = &ls.last_input.mouse_pos;
 
@@ -418,7 +420,7 @@ impl<'a> System<'a> for EditorSave {
     );
 
     fn run(&mut self, (asmblgr, lu, ls): Self::SystemData) {
-        use winit::VirtualKeyCode::{LControl, S};
+        use glutin::VirtualKeyCode::{LControl, S};
         if ls.last_input.keys_held.contains(&LControl) && ls.tapped_keys.contains(&S) {
             asmblgr.save_json(&lu);
         }
@@ -562,13 +564,19 @@ fn main() {
 
     // -- Specs Resources:
     // windowing stuff
-    let mut winit_state = WinitState::default();
-    let mut local_state = LocalState::from_winit_state(&winit_state);
+    let (mut glutin_state, window) = GlutinState::new::<String, glutin::PossiblyCurrent>(
+        "stockRPG".to_owned(),
+        glutin::dpi::LogicalSize {
+            width: 1366.0,
+            height: 768.0,
+        },
+    ).unwrap();
+    let mut local_state = LocalState::from_glutin_window(&window.window());
     // Developer Tools stuff
-    let mut dev_ui = DevUiState::new(&winit_state.window);
+    let mut dev_ui = DevUiState::new(&window.window());
     let compendium = Compendium::new();
     // rendering
-    let (mut wgpu_state, spritesheet_size) = WgpuState::new(&winit_state.window, &mut dev_ui.imgui);
+    let (mut glium, spritesheet_size) = GliumState::new(window, &mut dev_ui.imgui);
     // Dyon
     let mut dyon_state = DyonState::new();
     let dyon_console = DyonConsole::default();
@@ -635,7 +643,7 @@ fn main() {
 
     while !world.read_resource::<LocalState>().quit {
         // input deals with thread-bound stuff so it's not a system
-        winit_state.input(&world, &mut dev_ui);
+        glutin_state.input(&world, &mut dev_ui);
 
         // your everyday ECS systems are run first
         dispatcher.dispatch(&mut world.res);
@@ -655,6 +663,6 @@ fn main() {
         let ui = dev_ui.run(&world);
 
         // and the dev_ui is rendered right alongside the world.
-        wgpu_state.render(&world, ui);
+        glium.render(&world, ui);
     }
 }

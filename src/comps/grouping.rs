@@ -39,7 +39,7 @@ pub struct Tile {
     left: u32,
     right: u32,
     above: u32,
-    below: u32
+    below: u32,
 }
 impl DevUiRender for Tile {
     fn dev_ui_render(&mut self, ui: &imgui::Ui, _world: &specs::World) {

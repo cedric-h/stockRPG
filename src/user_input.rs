@@ -1,6 +1,6 @@
 use crate::prelude::*;
+use glutin::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 use std::collections::HashSet;
-use winit::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 
 #[derive(Debug, Clone, Default)]
 pub struct UserInput {
@@ -45,7 +45,7 @@ impl UserInput {
             }
 
             WindowEvent::CursorMoved {
-                position: winit::dpi::LogicalPosition { x, y },
+                position: glutin::dpi::LogicalPosition { x, y },
                 ..
             } => {
                 self.mouse_pos = Some((*x as f32, *y as f32));

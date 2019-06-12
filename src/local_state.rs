@@ -15,14 +15,13 @@ pub struct LocalState {
     pub mouse_down: bool,
     pub quit: bool,
     pub last_input: UserInput,
-    pub tapped_keys: HashSet<winit::VirtualKeyCode>,
+    pub tapped_keys: HashSet<glutin::VirtualKeyCode>,
     pub focused: bool,
 }
 
 impl LocalState {
-    pub fn from_winit_state(winit_state: &WinitState) -> Self {
-        let (frame_width, frame_height) = winit_state
-            .window
+    pub fn from_glutin_window(window: &glutin::Window) -> Self {
+        let (frame_width, frame_height) = window
             .get_inner_size()
             .map(|logical| logical.into())
             .unwrap_or((0.0, 0.0));
