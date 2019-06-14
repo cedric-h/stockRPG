@@ -347,6 +347,10 @@ impl<'a> System<'a> for EditorPlaceControls {
         &mut self,
         (mut outlines, mut ps, mut compium, physes, asmblgd, ents, ls, asmblgr): Self::SystemData,
     ) {
+        if !compium.show_dev_ui {
+            return;
+        }
+
         use glutin::VirtualKeyCode::G;
         let mouse_clicked_this_frame = ls.last_input.mouse_state.unwrap_or(false);
         let new_mouse = &ls.last_input.mouse_pos;
@@ -564,13 +568,14 @@ fn main() {
 
     // -- Specs Resources:
     // windowing stuff
-    let (mut glutin_state, window) = GlutinState::new::<String, glutin::PossiblyCurrent>(
-        "stockRPG".to_owned(),
+    let (mut glutin_state, window) = GlutinState::new(
+        "stockRPG",
         glutin::dpi::LogicalSize {
             width: 1366.0,
             height: 768.0,
         },
-    ).unwrap();
+    )
+    .unwrap();
     let mut local_state = LocalState::from_glutin_window(&window.window());
     // Developer Tools stuff
     let mut dev_ui = DevUiState::new(&window.window());
@@ -643,7 +648,7 @@ fn main() {
 
     while !world.read_resource::<LocalState>().quit {
         // input deals with thread-bound stuff so it's not a system
-        glutin_state.input(&world, &mut dev_ui);
+        glutin_state.input(&*glium.display.gl_window(), &world, &mut dev_ui);
 
         // your everyday ECS systems are run first
         dispatcher.dispatch(&mut world.res);

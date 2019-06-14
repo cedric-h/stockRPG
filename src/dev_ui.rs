@@ -54,7 +54,7 @@ fn type_editor(ui: &Ui, world: &specs::World) {
 
         // I have to have this weird construct to avoid copying the entire
         // names_list just to avoid borrow errors. Safety! :D
-        let add_me: Option<Box<custom_component_macro::AssemblageComponent>> = {
+        let add_me: Option<Box<dyn custom_component_macro::AssemblageComponent>> = {
             let existing_comps = asmblgr.assemblages[assemblage_key]
                 .iter()
                 .map(|x| x.name())
@@ -353,12 +353,12 @@ pub struct DevUiState {
 
 impl DevUiState {
     pub fn new(window: &glutin::Window) -> Self {
-        let hidpi_factor = window.get_hidpi_factor().round();
+        let hidpi_factor = window.get_hidpi_factor();
 
         let mut imgui = ImGui::init();
         imgui.set_ini_filename(None);
 
-        let font_size = (8.0 * hidpi_factor) as f32;
+        let font_size = (8.0 * hidpi_factor.round()) as f32;
 
         imgui.fonts().add_font_with_config(
             include_bytes!("./font/SDS_8x8.ttf"),
@@ -369,7 +369,7 @@ impl DevUiState {
             &FontGlyphRange::default(),
         );
 
-        imgui.set_font_global_scale((1.0 / hidpi_factor) as f32);
+        imgui.set_font_global_scale((1.0 / hidpi_factor.round()) as f32);
 
         imwinit::configure_keys(&mut imgui);
 
@@ -381,8 +381,7 @@ impl DevUiState {
 
     pub fn other_input_processing(&mut self, window: &glutin::Window) {
         imwinit::update_mouse_cursor(&self.imgui, window);
-        self.frame_size =
-            imwinit::get_frame_size(window, window.get_hidpi_factor().round()).unwrap();
+        self.frame_size = imwinit::get_frame_size(window, window.get_hidpi_factor()).unwrap();
     }
 
     pub fn process_event(&mut self, event: &glutin::Event, dpi_factor: f64) {
@@ -396,10 +395,11 @@ impl DevUiState {
         let mut open_type_from_entity_modal = false;
 
         // gotta make sure the compendium is dropped
-        let (is_chosen_entity, is_type_to_edit) = {
+        let (show_dev_ui, is_chosen_entity, is_type_to_edit) = {
             let compium = world.read_resource::<Compendium>();
             let ents = world.entities();
             (
+                compium.show_dev_ui,
                 compium
                     .get_chosen_ent()
                     .and_then(|x| ents.is_alive(x).as_option())
@@ -416,40 +416,42 @@ impl DevUiState {
 
         let ui = self.imgui.frame(self.frame_size, delta_s);
 
-        // render the right-click-a-compendium-type thing
-        // this actually has to get rendered before the compendium,
-        // or is_type_to_edit could become invalid.
-        if is_type_to_edit {
-            ui.window(im_str!("Type Editor"))
-                .position((1366.0 - 445.0, 0.0), ImGuiCond::FirstUseEver)
-                .size((445.0, 345.0), ImGuiCond::FirstUseEver)
-                .menu_bar(true)
-                .build(|| type_editor(&ui, &world));
+        if show_dev_ui {
+            // render the right-click-a-compendium-type thing
+            // this actually has to get rendered before the compendium,
+            // or is_type_to_edit could become invalid.
+            if is_type_to_edit {
+                ui.window(im_str!("Type Editor"))
+                    .position((1366.0 - 445.0, 0.0), ImGuiCond::FirstUseEver)
+                    .size((445.0, 345.0), ImGuiCond::FirstUseEver)
+                    .menu_bar(true)
+                    .build(|| type_editor(&ui, &world));
+            }
+
+            // render the you-clicked-an-entity thing
+            if is_chosen_entity {
+                ui.window(im_str!("Entity Editor"))
+                    .position((1366.0 - 445.0, 20.0), ImGuiCond::FirstUseEver)
+                    .size((445.0, 345.0), ImGuiCond::FirstUseEver)
+                    .menu_bar(true)
+                    .build(|| {
+                        open_type_from_entity_modal = entity_editor(&ui, &world);
+                    });
+            }
+
+            // render the fancy compendium thing
+            ui.with_style_var(StyleVar::WindowRounding(0.0), || {
+                ui.window(im_str!("The Compendium"))
+                    .position((0.0, 0.0), ImGuiCond::FirstUseEver)
+                    .size((250.0, 500.0), ImGuiCond::FirstUseEver)
+                    .build(|| {
+                        compendium(&ui, &world);
+                    });
+            });
+
+            // show the little window with the FPS in it
+            ui.show_metrics_window(&mut true);
         }
-
-        // render the you-clicked-an-entity thing
-        if is_chosen_entity {
-            ui.window(im_str!("Entity Editor"))
-                .position((1366.0 - 445.0, 20.0), ImGuiCond::FirstUseEver)
-                .size((445.0, 345.0), ImGuiCond::FirstUseEver)
-                .menu_bar(true)
-                .build(|| {
-                    open_type_from_entity_modal = entity_editor(&ui, &world);
-                });
-        }
-
-        // render the fancy compendium thing
-        ui.with_style_var(StyleVar::WindowRounding(0.0), || {
-            ui.window(im_str!("The Compendium"))
-                .position((0.0, 0.0), ImGuiCond::FirstUseEver)
-                .size((250.0, 500.0), ImGuiCond::FirstUseEver)
-                .build(|| {
-                    compendium(&ui, &world);
-                });
-        });
-
-        // show the little window with the FPS in it
-        ui.show_metrics_window(&mut true);
 
         // for the scripteeronators!!!
         ui.with_color_vars(

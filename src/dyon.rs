@@ -23,6 +23,7 @@ pub struct DyonState {
     runtime: dyon::Runtime,
     module: std::sync::Arc<dyon::Module>,
     dyon_data: DyonData,
+    called_init: bool,
 }
 impl DyonState {
     pub fn new() -> Self {
@@ -119,6 +120,23 @@ impl DyonState {
             Dfn {
                 lts: vec![],
                 tys: vec![],
+                ret: Type::Void,
+            },
+        );
+
+        // show the devtool windows
+        dyon_fn! {fn show_developer_tools(show: bool) {
+            let world = unsafe { Current::<World>::new() };
+            let mut compium = world.write_resource::<Compendium>();
+
+            compium.show_dev_ui = show;
+        }}
+        module.add(
+            Arc::new("show_developer_tools".into()),
+            show_developer_tools,
+            Dfn {
+                lts: vec![Lt::Default],
+                tys: vec![Type::Bool],
                 ret: Type::Void,
             },
         );
@@ -398,6 +416,7 @@ impl DyonState {
             runtime,
             module: Arc::new(module),
             dyon_data: DyonData::default(),
+            called_init: false,
         }
     }
 
@@ -408,7 +427,7 @@ impl DyonState {
         use specs::Join;
 
         // I'm fairly sure this world has to be dropped
-        let script_events = {
+        let mut script_events = {
             let world = unsafe { &*Current::<specs::World>::new() };
             let entities = world.entities();
             let mut event_storage = world.write_storage::<ScriptEvent>();
@@ -420,6 +439,18 @@ impl DyonState {
                 // copy so no references to the world remain!
                 .clone()
         };
+
+        if !self.called_init {
+            script_events.push((
+                ScriptEvent {
+                    function: "init".to_owned(),
+                    payload: 0,
+                },
+                0,
+            ));
+            self.called_init = true;
+        }
+
         let mut events_iter = script_events.iter().peekable();
 
         // if there's actually at least one event to bother cloning the module for...

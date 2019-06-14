@@ -183,12 +183,12 @@ impl PhysState {
     }
 
     #[inline]
-    pub fn body(&self, phys: &Phys) -> Option<&Body<f32>> {
+    pub fn body(&self, phys: &Phys) -> Option<&dyn Body<f32>> {
         self.world.body(phys.body)
     }
 
     #[inline]
-    pub fn body_mut(&mut self, phys: &Phys) -> Option<&mut Body<f32>> {
+    pub fn body_mut(&mut self, phys: &Phys) -> Option<&mut dyn Body<f32>> {
         self.world.body_mut(phys.body)
     }
 }

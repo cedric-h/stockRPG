@@ -6,6 +6,7 @@ pub struct Compendium {
     pub entity_query: ImString,
     pub wip_type_name: ImString,
     pub component_to_add_index: i32,
+    pub show_dev_ui: bool,
     pub mouselock_chosen_ent: bool,
     pub editing_assemblage: Option<String>,
     pub place_assemblage: Option<String>,
@@ -22,6 +23,7 @@ impl Compendium {
             editing_assemblage: None,
             place_assemblage: None,
             chosen_ent: None,
+            show_dev_ui: false,
         }
     }
 
@@ -59,9 +61,7 @@ impl Compendium {
     }
 
     pub fn unchoose_ent(&mut self, outlines: &mut WriteStorage<BoxOutline>) {
-        info!("well at least it's called I guess");
         if let Some(ent) = self.chosen_ent {
-            info!("I don't get it; I erradicated the mfer!");
             outlines.remove(ent);
         }
         self.chosen_ent = None;

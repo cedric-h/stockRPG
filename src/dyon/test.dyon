@@ -1,3 +1,9 @@
+fn init(null, nill) {
+	log("yipeee!")
+	show_developer_tools(true)
+}
+
+// this code is run when someone walks up to the chicken and presses E
 fn business_greeting(chicken, player) {
 
     c_cache := get_cache_entity(chicken)
@@ -39,8 +45,11 @@ fn business_greeting(chicken, player) {
 	save_caches()
 }
 
+// this code is run when something slams into the chicken.
 fn business_collide(chicken, melo) {
 
+	// we need to get the chicken's data, that will tell us how
+	// many melons they've collected so far.
     c_cache := get_cache_entity(chicken)
 
 

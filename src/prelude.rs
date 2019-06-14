@@ -14,6 +14,7 @@ pub use crate::glium::*;
 pub use crate::glutin_state::*;
 
 //pub use wgpu::winit;
+pub use glium::glutin;
 
 pub use boolinator::Boolinator;
 pub use nalgebra_glm as glm;

@@ -1,8 +1,7 @@
 // use crate::prelude::*;
 use crate::prelude::*;
-use glutin::{
-    dpi::LogicalSize, ContextCurrentState, CreationError, Event, EventsLoop, VirtualKeyCode,
-    Window, WindowBuilder, WindowedContext,
+use glium::glutin::{
+    dpi::LogicalSize, CreationError, Event, EventsLoop, GlWindow, VirtualKeyCode, WindowBuilder,
 };
 use std::collections::HashSet;
 
@@ -18,38 +17,36 @@ impl GlutinState {
     /// The specified title and size are used, other elements are default.
     /// ## Failure
     /// It's possible for the window creation to fail. This is unlikely.
-    pub fn new<T: Into<String>, CCS: ContextCurrentState>(
+    pub fn new<T: Into<String>>(
         title: T,
         size: LogicalSize,
-    ) -> Result<(Self, WindowedContext<CCS>), CreationError> {
+    ) -> Result<(Self, GlWindow), CreationError> {
         let events_loop = EventsLoop::new();
         let wb = WindowBuilder::new().with_title(title).with_dimensions(size);
-        glutin::ContextBuilder::new()
-            .with_vsync(true)
-            .build_windowed(wb, &events_loop)
-            .map(|window| {
-                (
-                    Self {
-                        events_loop,
-                        keys_held: HashSet::new(),
-                    },
-                    window,
-                )
-            })
+        let cb = glutin::ContextBuilder::new().with_vsync(true);
+
+        GlWindow::new(wb, cb, &events_loop).map(|window| {
+            (
+                Self {
+                    events_loop,
+                    keys_held: HashSet::new(),
+                },
+                window,
+            )
+        })
     }
 
-    pub fn input(&mut self, world: &specs::World, dev_ui: &mut DevUiState) {
+    pub fn input(&mut self, window: &GlWindow, world: &specs::World, dev_ui: &mut DevUiState) {
         // gotta store that input somewhere, so the rest of the program can access it! :D
         let mut local_state = world.write_resource::<LocalState>();
         let mut input_frame = UserInput::default();
 
         // manually split borrow
         let events_loop = &mut self.events_loop;
-        let window = &self.window;
         let keys_held = &mut self.keys_held;
 
         // sometimes I wonder why imgui doesn't just record this and be done with it.
-        let dpi_factor = self.window.get_hidpi_factor().round();
+        let dpi_factor = window.get_hidpi_factor();
 
         //this is mostly just resize if needed.
         dev_ui.other_input_processing(window);

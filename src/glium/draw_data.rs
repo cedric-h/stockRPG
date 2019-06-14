@@ -4,16 +4,17 @@ use specs::{Join, World};
 
 #[derive(Clone, Copy)]
 pub struct SpritesheetVertex {
-    _pos: [f32; 4],
-    _tex_coord: [f32; 2],
+    pub position: [f32; 4],
+    pub tex_coords: [f32; 2],
 }
 
+glium::implement_vertex!(SpritesheetVertex, position, tex_coords);
 impl SpritesheetVertex {
     pub fn new(iso: &Isometry3<f32>, loc: &[f32; 3], tc: &[f32; 2]) -> Self {
         let pnt = iso * Point3::from(*loc);
         Self {
-            _pos: [pnt.x, pnt.y, pnt.z, 1.0],
-            _tex_coord: [tc[0], tc[1]],
+            position: [pnt.x, pnt.y, pnt.z, 1.0],
+            tex_coords: [tc[0], tc[1]],
         }
     }
 
@@ -46,6 +47,7 @@ impl SpritesheetVertex {
     }
 }
 
+/*
 #[derive(Clone, Copy)]
 pub struct BoxOutlineVertex {
     _pos: [f32; 4],
@@ -137,3 +139,4 @@ impl BoxOutlineVertex {
         all_outlines
     }
 }
+*/

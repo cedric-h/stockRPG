@@ -1,5 +1,5 @@
-//mod draw_data;
-//mod game_renderer;
+mod draw_data;
+mod game_renderer;
 //mod helper;
 
 pub struct SpritesheetDimensions {
@@ -9,26 +9,25 @@ pub struct SpritesheetDimensions {
 
 use crate::prelude::*;
 //pub use draw_data::*;
-//use game_renderer::GameRenderer;
+use game_renderer::GameRenderer;
 
 use glium::Display;
-use glutin::{ContextCurrentState, WindowedContext};
 use imgui_glium_renderer as im_glium;
 
 pub static IMG_BYTES: &[u8] = include_bytes!("../img/spritesheet.png");
 
 pub struct GliumState {
-    //game_renderer: GameRenderer,
+    game_renderer: GameRenderer,
     imgui_renderer: im_glium::Renderer,
-    display: Display,
+    pub display: Display,
 }
 
 impl GliumState {
-    pub fn new<T: ContextCurrentState>(
-        window: WindowedContext<T>,
+    pub fn new(
+        window: glutin::GlWindow,
         imgui: &mut imgui::ImGui,
     ) -> (Self, SpritesheetDimensions) {
-        let display = Display::unchecked(window).unwrap();
+        let display = Display::from_gl_window(window).unwrap();
         let window = display.gl_window();
 
         //imgui renderer
@@ -45,43 +44,31 @@ impl GliumState {
             y: texels.dimensions().1 as f32,
         };
 
+        let game_renderer =
+            GameRenderer::init(texels, &display).expect("failed to initialize game renderer!");
+
         //finally instantiate the tuple we'll return
+        drop(window);
         (
             Self {
                 display,
                 imgui_renderer,
+                game_renderer,
             },
             spritesheet_dimensions,
         )
     }
 
-    #[inline]
-    fn resize_if_should(&mut self, world: &specs::World) {
-        let ls = world.read_resource::<LocalState>();
-        if let Some((x, y)) = ls.last_input.new_frame_size {
-            self.resize(x, y);
-        }
-    }
-
-    #[inline]
-    pub fn resize(&mut self, x: f64, y: f64) {
-        /*
-        self.swap_chain_descriptor.width = x.round() as u32;
-        self.swap_chain_descriptor.height = y.round() as u32;
-        self.swap_chain = self
-            .device
-            .create_swap_chain(&self.surface, &self.swap_chain_descriptor);
-        self.game_renderer
-            .resize(&self.swap_chain_descriptor, &mut self.device);*/
-    }
-
     pub fn render(&mut self, world: &specs::World, ui: imgui::Ui) {
-        use glium::Surface;
         let mut target = self.display.draw();
-        target.clear_color(0.1, 0.2, 0.3, 1.0);
+
+        self.game_renderer
+            .render(&mut target, &self.display, world)
+            .expect("game rendering failed");
         self.imgui_renderer
             .render(&mut target, ui)
             .expect("imgui rendering failed");
+
         target.finish().unwrap();
     }
 }

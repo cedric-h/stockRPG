@@ -32,8 +32,8 @@ boolinator = "2.4.0"
 log = "0.4.0"
 simple_logger = "1.0"
 # graphics/window
-glium = "^0.23"
-glutin = "^0.21.0"
+glium = "0.23"
+# glutin = "0.21.0"
 # wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git" }
 # glsl-to-spirv = "0.1"
 image = "0.21"

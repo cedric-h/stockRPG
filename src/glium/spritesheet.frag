@@ -1,13 +1,11 @@
-#version 450
-
-layout(location = 0) in vec2 v_TexCoord;
-layout(location = 0) out vec4 o_Target;
-layout(set = 0, binding = 1) uniform texture2D t_Color;
-layout(set = 0, binding = 2) uniform sampler s_Color;
+#version 140
+uniform sampler2D tex;
+in vec2 v_tex_coords;
+out vec4 f_color;
 
 void main() {
-    vec4 tex = texture(sampler2D(t_Color, s_Color), v_TexCoord);
-    if (tex.a == 0.0)
-	discard;
-    o_Target = tex;
+	f_color = texture(tex, v_tex_coords);
+	if (f_color.a == 0.0) {
+		discard;
+	}
 }

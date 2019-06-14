@@ -11,8 +11,8 @@ const INSTANCES_PATH: &str = "./src/data/instances.json";
 
 #[allow(dead_code)]
 pub struct Assemblager {
-    pub assemblages: HashMap<String, Vec<Box<AssemblageComponent>>>,
-    pub components: HashMap<ImString, Box<AssemblageComponent>>,
+    pub assemblages: HashMap<String, Vec<Box<dyn AssemblageComponent>>>,
+    pub components: HashMap<ImString, Box<dyn AssemblageComponent>>,
 }
 #[allow(dead_code)]
 impl Assemblager {
@@ -94,7 +94,7 @@ impl Assemblager {
         file.read_to_string(&mut contents).unwrap();
 
         {
-            let entity_data: Vec<Vec<Box<AssemblageComponent>>> =
+            let entity_data: Vec<Vec<Box<dyn AssemblageComponent>>> =
                 serde_json::from_str(&contents).unwrap();
             let lu = world.read_resource::<specs::world::LazyUpdate>();
             let ents = world.entities();
